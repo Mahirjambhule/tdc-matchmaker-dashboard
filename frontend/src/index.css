@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-tdc-logo-gold: #B88E4C;    
+  --color-tdc-text-gold: #D4BD96;    
+  --color-tdc-green: #143F2D;        
+  --color-tdc-green-hover: #1D543D;  
+  --color-tdc-cream: #F3ECE3;        
+  --color-tdc-dark: #121A18;         
+  --color-tdc-card: #FFFFFF;
+  
+  --font-serif: 'Playfair Display', Georgia, serif;
+}
+
+html, body {
+  background-color: var(--color-tdc-cream);
+  color: var(--color-tdc-dark);
+  font-family: Inter, system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}

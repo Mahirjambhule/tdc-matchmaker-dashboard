@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <circle cx="50" cy="50" r="48" fill="#A77328" />
+  
+  <text 
+    x="50%" 
+    y="54%" 
+    dominant-baseline="middle" 
+    text-anchor="middle" 
+    font-family="Times New Roman, Times, Georgia, serif" 
+    font-weight="normal" 
+    font-size="45" 
+    fill="#FFFFFF"
+    letter-spacing="-1.5"
+  >tdc</text>
+</svg>
