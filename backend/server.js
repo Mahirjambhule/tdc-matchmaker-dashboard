@@ -20,13 +20,13 @@ const PORT = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('✅ Successfully connected to MongoDB Atlas');
+    console.log('Successfully connected to MongoDB Atlas');
     app.listen(PORT, () => {
-      console.log(`🚀 Server is running smoothly on port ${PORT}`);
+      console.log(`erver is running smoothly on port ${PORT}`);
     });
   })
   .catch((error) => {
-    console.error('❌ Database connection error:', error.message);
+    console.error('Database connection error:', error.message);
     process.exit(1);
   });
 
