@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { User, MapPin, MessageSquare, Send, Award, Sparkles, CheckCircle2, X, AlertTriangle } from 'lucide-react';
+import { User, MapPin, MessageSquare, Send, Award, Sparkles, CheckCircle2, X } from 'lucide-react';
 
 export default function DetailedMatchView({ customerId, onBack }) {
   const [client, setClient] = useState(null);
@@ -224,7 +224,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                         <span className="text-xs text-gray-400">({new Date().getFullYear() - new Date(match.dateOfBirth).getFullYear()} Yrs, {match.city})</span>
                         
                         {isRankedByAI && candidate.rankLabel && (
-                          <span className={`font-mono font-bold text-[9px] px-2 py-0.5 rounded-md tracking-wider border animate-scaleUp bg-slate-900 text-tdc-text-gold border-white/10`}>
+                          <span className={`font-mono font-bold text-[9px] px-2 py-0.5 rounded-md tracking-wider border bg-slate-900 text-tdc-text-gold border-white/10`}>
                             {candidate.rankLabel}
                           </span>
                         )}
@@ -239,26 +239,15 @@ export default function DetailedMatchView({ customerId, onBack }) {
                       </div>
                     </div>
 
-                    {/* Right Side Interactions Area Container */}
                     <div className="flex items-center space-x-4 shrink-0 w-full sm:w-auto justify-end">
-                      
-                      {/* DYNAMIC SCORE DISPLAY: Renders seamlessly right after the master button execution */}
                       {isRankedByAI && (
                         <div 
                           onClick={(e) => handleScoreClick(e, candidate)}
-                          className={`p-2.5 rounded-xl text-center shadow-xs transition-all shrink-0 w-16 cursor-pointer border scaleUp-animation ${
-                            candidate.aiScore === "ERR"
-                              ? 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700'
-                              : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
-                          }`}
+                          className={`p-2.5 rounded-xl text-center shadow-xs transition-all shrink-0 w-16 cursor-pointer border bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800`}
                           title="Click to view full dynamic match matrix reasoning"
                         >
-                          <p className={`text-[8px] uppercase tracking-wider font-bold font-mono ${candidate.aiScore === "ERR" ? 'text-rose-500' : 'text-amber-600'}`}>
-                            {candidate.aiScore === "ERR" ? "MATRIX" : "AI Score"}
-                          </p>
-                          <p className="text-sm font-black font-mono tracking-tight">
-                            {candidate.aiScore === "ERR" ? "VIEW" : `${candidate.aiScore}%`}
-                          </p>
+                          <p className="text-[8px] uppercase tracking-wider font-bold font-mono text-amber-600">AI Score</p>
+                          <p className="text-sm font-black font-mono tracking-tight">{candidate.aiScore}%</p>
                         </div>
                       )}
 
@@ -280,8 +269,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
       {/* COMPATIBILITY ANALYSIS SCREEN MODAL POPUP CONTAINER */}
       {selectedMatchForExplanation && aiAnalysis && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-50 px-4 animate-fadeIn">
-          <div className="bg-slate-950 text-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-800 relative animate-scaleUp">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-50 px-4">
+          <div className="bg-slate-950 text-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-800 relative">
             <div className="flex justify-between items-center p-5 border-b border-white/10 shrink-0">
               <h4 className="font-serif text-base font-bold text-tdc-text-gold tracking-wide flex items-center"><Sparkles className="w-4 h-4 mr-2" /> Match Logic Compliance Matrix Review</h4>
               <button onClick={() => setSelectedMatchForExplanation(null)} className="text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
@@ -323,8 +312,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
       {/* Send Match Overlay Popups */}
       {activeModalMatch && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 px-4 animate-fadeIn">
-          <div className="bg-white text-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center space-y-4 border border-gray-100 animate-scaleUp">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 px-4">
+          <div className="bg-white text-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center space-y-4 border border-gray-100">
             <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-xs"><CheckCircle2 className="w-6 h-6" /></div>
             <div className="space-y-1">
               <h3 className="font-serif text-lg font-bold text-gray-900">Premium Match Email Dispatched!</h3>
@@ -348,8 +337,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
       {/* Structural Profile Preview Dossier Overlay */}
       {previewProfile && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 px-4 animate-fadeIn">
-          <div className="bg-white text-gray-800 rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-gray-100 relative animate-scaleUp">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 px-4">
+          <div className="bg-white text-gray-800 rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-gray-100 relative">
             
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center space-x-2.5">
