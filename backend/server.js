@@ -12,10 +12,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Main Resource Routing Endpoints
 app.use('/api/customers', customerRoutes);
 
-// Direct AI Integration Middleware Pipeline Binding
 app.post('/api/customers/ai/analyze', customerController.getAIMatchAnalysis);
 
 const PORT = process.env.PORT || 5000;

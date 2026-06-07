@@ -214,7 +214,6 @@ exports.getAIMatchAnalysis = async (req, res) => {
   }
 };
 
-// ================= DELETE OPERATIONAL LOG NOTE =================
 exports.deleteCustomerNote = async (req, res) => {
   try {
     const { id, noteId } = req.params;

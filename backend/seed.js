@@ -75,7 +75,7 @@ const generateProfiles = () => {
       phone: `98765${String(idCounter).padStart(5, '0')}`, city: randomChoice(cities),
       religion: blueprint.religion, caste: randomChoice(blueprint.castes), languagesKnown: randomChoice(languages),
       college: randomChoice(colleges), degree: randomChoice(degrees), company: randomChoice(companies),
-      designation: randomChoice(designations), income: randomRange(8, 45), height: randomRange(165, 188),
+      designation: randomChoice(designations), income: randomRange(6, 20), height: randomRange(165, 188),
       maritalStatus: randomChoice(['Never Married', 'Never Married', 'Never Married', 'Divorced']),
       siblings: randomRange(0, 2), diet: blueprint.religion === 'Jain' ? 'Jain' : randomChoice(['Veg', 'Non-Veg', 'Eggetarian']),
       wantKids: randomChoice(['Yes', 'No', 'Maybe']), openToRelocate: randomChoice(['Yes', 'No', 'Maybe']),
@@ -98,7 +98,7 @@ const generateProfiles = () => {
       phone: `98765${String(idCounter).padStart(5, '0')}`, city: randomChoice(cities),
       religion: blueprint.religion, caste: randomChoice(blueprint.castes), languagesKnown: randomChoice(languages),
       college: randomChoice(colleges), degree: randomChoice(degrees), company: randomChoice(companies),
-      designation: randomChoice(designations), income: randomRange(6, 35), height: randomRange(150, 173),
+      designation: randomChoice(designations), income: randomRange(6, 20), height: randomRange(150, 173),
       maritalStatus: randomChoice(['Never Married', 'Never Married', 'Never Married', 'Divorced']),
       siblings: randomRange(0, 2), diet: blueprint.religion === 'Jain' ? 'Jain' : randomChoice(['Veg', 'Non-Veg', 'Eggetarian']),
       wantKids: randomChoice(['Yes', 'No', 'Maybe']), openToRelocate: randomChoice(['Yes', 'No', 'Maybe']),
@@ -112,11 +112,11 @@ const generateProfiles = () => {
 
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
-    console.log('🔄 Connected to MongoDB. Clearing outdated records...');
+    console.log('Connected to MongoDB. Clearing outdated records...');
     await Customer.deleteMany({});
-    console.log('🌱 Building clean balanced matrix of 300 unique profiles...');
+    console.log('Building clean balanced matrix of 300 unique profiles...');
     await Customer.insertMany(generateProfiles());
-    console.log('✅ Success! Database injected with clean profile distribution.');
+    console.log('Success! Database injected with clean profile distribution.');
     process.exit(0);
   })
   .catch((err) => {
