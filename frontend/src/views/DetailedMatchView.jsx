@@ -200,6 +200,20 @@ export default function DetailedMatchView({ customerId, onBack }) {
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">Relocate</p><p className="font-medium text-gray-700 truncate">{client.openToRelocate}</p></div>
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">Pets</p><p className="font-medium text-gray-700 truncate">{client.openToPets}</p></div>
                   <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Wants Children</p><p className="font-medium text-gray-800">{client.wantKids}</p></div>
+                  <div className="col-span-2 grid grid-cols-2 gap-x-4 border-y border-dashed border-gray-100 py-2 my-1">
+                    <div>
+                      <p className="text-[11px] text-gray-400 uppercase font-medium">Email Address</p>
+                      <p className="font-medium text-gray-800 text-xs truncate select-all hover:text-amber-600 transition-colors" title={client.email}>
+                        {client.email || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-gray-400 uppercase font-medium">Phone Number</p>
+                      <p className="font-medium text-gray-800 text-xs truncate select-all hover:text-amber-600 transition-colors">
+                        {client.phone || client.phoneNumber || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

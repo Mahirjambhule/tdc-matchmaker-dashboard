@@ -2,6 +2,15 @@ const Groq = require('groq-sdk');
 const mongoose = require('mongoose');
 const Customer = require('../models/Customer');
 
+// Helper function to dynamically calculate age from dateOfBirth strings safely
+const calculateAge = (dobString) => {
+  if (!dobString) return 'N/A';
+  const birthYear = new Date(dobString).getFullYear();
+  const currentYear = new Date().getFullYear();
+  return currentYear - birthYear;
+};
+
+// ================= FETCH ALL CUSTOMERS =================
 exports.getAllCustomers = async (req, res) => {
   try {
     const customers = await Customer.find({}, 'firstName lastName gender dateOfBirth city maritalStatus journeyStatus');
@@ -11,6 +20,7 @@ exports.getAllCustomers = async (req, res) => {
   }
 };
 
+// ================= FETCH PROFILE BY ID =================
 exports.getCustomerById = async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
@@ -23,6 +33,7 @@ exports.getCustomerById = async (req, res) => {
   }
 };
 
+// ================= UPDATE STATUS AND NOTES =================
 exports.updateCustomerStatusAndNotes = async (req, res) => {
   try {
     const { journeyStatus, newNote } = req.body;
@@ -42,6 +53,7 @@ exports.updateCustomerStatusAndNotes = async (req, res) => {
   }
 };
 
+// ================= ALGORITHMIC MATCHING ENGINE =================
 exports.getAlgorithmicMatches = async (req, res) => {
   try {
     const customerId = req.params.customerId || req.params.id;
@@ -53,47 +65,104 @@ exports.getAlgorithmicMatches = async (req, res) => {
     const clientBirthYear = new Date(client.dateOfBirth).getFullYear();
     const clientAge = currentYear - clientBirthYear;
 
+    const isClientMale = client.gender === 'Male';
+
     const topMatches = await Customer.aggregate([
+      // STAGE 1: Hard Filters (Strict matching rules)
       {
         $match: {
           _id: { $ne: new mongoose.Types.ObjectId(customerId) },
-          gender: client.gender === 'Male' ? 'Female' : 'Male',
-          religion: client.religion
-        }
-      },
-      {
-        $addFields: {
-          candidateBirthYear: { $year: "$dateOfBirth" },
-          candidateAge: { $subtract: [currentYear, { $year: "$dateOfBirth" }] }
-        }
-      },
-      {
-        $addFields: {
-          structuralScore: {
-            $add: [
-              50,
-              { $cond: [{ $gte: [{ $subtract: [currentYear, { $year: "$dateOfBirth" }] }, clientAge] }, 40, -60] },
-              { $cond: [{ $gte: [{ $ifNull: ["$height", 0] }, { $ifNull: [client.height, 0] }] }, 30, 0] },
+          gender: isClientMale ? 'Female' : 'Male',
+          religion: client.religion,
+          
+          // HARD MATCH PROTOCOLS:
+          $expr: {
+            $cond: [
+              isClientMale,
+              // If Primary Client is MALE: Candidate (Female) MUST be younger, shorter, and earn less/equal
               {
-                $cond: [
-                  { $gte: ["$income", client.income] }, 20,
-                  { $cond: [{ $gte: ["$income", client.income - 5] }, 10, 0] }
+                $and: [
+                  { $gt: [{ $year: "$dateOfBirth" }, clientBirthYear] }, 
+                  { $lte: [{ $ifNull: ["$height", 0] }, client.height || 999] },
+                  { $lte: [{ $ifNull: ["$income", 0] }, client.income || 999] }
+                ]
+              },
+              // If Primary Client is FEMALE: Candidate (Male) MUST be older, taller, and earn more/equal
+              {
+                $and: [
+                  { $lt: [{ $year: "$dateOfBirth" }, clientBirthYear] }, 
+                  { $gte: [{ $ifNull: ["$height", 0] }, client.height || 0] },
+                  { $gte: [{ $ifNull: ["$income", 0] }, client.income || 0] }
                 ]
               }
             ]
           }
         }
       },
+      
+      // STAGE 2: Add dynamic age fields for sorting optimization
+      {
+        $addFields: {
+          candidateBirthYear: { $year: "$dateOfBirth" },
+          candidateAge: { $subtract: [currentYear, { $year: "$dateOfBirth" }] }
+        }
+      },
+      
+      // STAGE 3: Structural Scoring Layer (Finetuning the ranks)
+      {
+        $addFields: {
+          structuralScore: {
+            $add: [
+              50, 
+              
+              // Age Gap Scoring Strategy
+              {
+                $let: {
+                  vars: { ageGap: { $abs: { $subtract: [clientAge, { $subtract: [currentYear, { $year: "$dateOfBirth" }] }] } } },
+                  in: {
+                    $cond: [
+                      { $and: [{ $gte: ["$$ageGap", 2] }, { $lte: ["$$ageGap", 5] }] }, 
+                      40, 
+                      10  
+                    ]
+                  }
+                }
+              },
+              
+              // Height Offset Points
+              {
+                $cond: [
+                  isClientMale,
+                  { $cond: [{ $lt: [{ $ifNull: ["$height", 0] }, client.height] }, 30, 10] }, 
+                  { $cond: [{ $gt: [{ $ifNull: ["$height", 0] }, client.height] }, 30, 10] }  
+                ]
+              },
+              
+              // Income Alignment Points
+              {
+                $cond: [
+                  isClientMale,
+                  { $cond: [{ $lt: ["$income", client.income] }, 20, 10] }, 
+                  { $cond: [{ $gt: ["$income", client.income] }, 20, 10] }  
+                ]
+              }
+            ]
+          }
+        }
+      },
+      
+      // STAGE 4: Final output sorting
       { $sort: { structuralScore: -1 } },
       { $limit: 10 }
     ]);
 
-    res.status(200).json(topMatches.map(match => ({ profile: match, matchingCriteria: ["Religion Matched"] })));
+    res.status(200).json(topMatches.map(match => ({ profile: match, matchingCriteria: ["Religion Matched", "Traditional Hierarchy Check Passed"] })));
   } catch (error) {
-    res.status(500).json({ message: "Error", error: error.message });
+    res.status(500).json({ message: "Error compiling filtered match directory", error: error.message });
   }
 };
 
+// ================= AI MATCH ANALYSIS PIPELINE =================
 exports.getAIMatchAnalysis = async (req, res) => {
   try {
     const { clientId, matchId } = req.body;
@@ -103,26 +172,81 @@ exports.getAIMatchAnalysis = async (req, res) => {
     if (!client || !match) return res.status(404).json({ message: "Profiles not found." });
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    
+    // Construct prompt with clean attribute normalization and fallbacks to prevent undefined values
     const prompt = `
-      Perform a deep-dive match analysis between ${client.firstName} and ${match.firstName}.
-      Client: ${JSON.stringify(client)}
-      Match: ${JSON.stringify(match)}
-      Return JSON only: { "compatibilityScore": int, "strengths": [str, str, str], "challenges": [str, str] }
+      You are the Lead Relationship Intelligence Architect for "The Date Crew" management dashboard.
+      Perform an exhaustive, data-driven compatibility evaluation between the following two individuals. You must conduct an intersectional analysis focusing deeply on lifestyle, structural, and cultural variables.
+
+      ===================================================================
+      PRIMARY CLIENT DOSSIER
+      ===================================================================
+      • Full Identity: ${client.firstName} ${client.lastName} (${client.gender})
+      • Current City: ${client.city || 'N/A'}
+      • Career Track: ${client.designation || 'N/A'} at ${client.company || 'N/A'}
+      • Academic Foundation: ${client.degree || 'N/A'} from ${client.college || 'N/A'}
+      • Dietary Profile: ${client.diet || client.dietaryPreference || 'N/A'}
+      • Value Matrix: ${client.familyValues || client.coreValues || 'N/A'}
+      • Relocation Mobility: ${client.openToRelocate || 'N/A'}
+      • Pet Compatibility: ${client.openToPets || 'N/A'}
+      • Procreation Intentions: ${client.wantKids || 'N/A'}
+
+      ===================================================================
+      POTENTIAL MATCH CANDIDATE DOSSIER
+      ===================================================================
+      • Full Identity: ${match.firstName} ${match.lastName} (${match.gender})
+      • Current City: ${match.city || 'N/A'}
+      • Career Track: ${match.designation || 'N/A'} at ${match.company || 'N/A'}
+      • Academic Foundation: ${match.degree || 'N/A'} from ${match.college || 'N/A'}
+      • Dietary Profile: ${match.diet || match.dietaryPreference || 'N/A'}
+      • Value Matrix: ${match.familyValues || match.coreValues || 'N/A'}
+      • Relocation Mobility: ${match.openToRelocate || 'N/A'}
+      • Pet Compatibility: ${match.openToPets || 'N/A'}
+      • Procreation Intentions: ${match.wantKids || 'N/A'}
+
+      ===================================================================
+      STRICT MANDATE PROTOCOLS FOR THE ANALYSIS
+      ===================================================================
+      1. compatibilityScore Matrix: Output an integer from 45 to 98. Weigh matching values, shared dietary paths, and geographic proximity highly.
+      2. Comprehensive Strengths: Provide exactly 3 highly descriptive sentences utilizing their first names (${client.firstName} and ${match.firstName}).
+         - Sentence 1: Analyze how their City proximity or Relocation flexibility combined with professional landscapes align.
+         - Sentence 2: Contrast and highlight their Education Background and career trajectory synergy.
+         - Sentence 3: Target the alignment of their Dietary Preferences, Pet stances, and Wants Children outlook.
+      3. Friction Point Assessments (Challenges): Provide exactly 2 distinct sentences identifying challenges.
+         - Analyze conflicts between Core Values (e.g., Traditional vs Liberal), contrasting relocation preferences, or potential adjustments in lifestyle metrics.
+         - CRITICAL: If they live in the same city, praise it in strengths; DO NOT mark it as a geographic challenge.
+
+      Return ONLY a raw, unquoted JSON object matching the template below. No markdown text, no surrounding text block wrappers:
+      {
+        "compatibilityScore": ANY_INTEG_VALUE_HERE,
+        "strengths": [
+          "Sentence 1 details city proximity, mobility, and workspace metrics.",
+          "Sentence 2 details education backgrounds and professional trajectories sync.",
+          "Sentence 3 details dietary preferences, values, pets, and children alignment."
+        ],
+        "challenges": [
+          "Sentence 1 highlights core values friction or relocation limitations.",
+          "Sentence 2 highlights lifestyle compromises or adjustment vectors."
+        ]
+      }
     `;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.1-8b-instant',
-      temperature: 0.4,
+      temperature: 0.3,
       response_format: { type: "json_object" }
     });
 
-    res.status(200).json(JSON.parse(chatCompletion.choices[0].message.content));
+    const responseContent = chatCompletion.choices[0].message.content.trim();
+    res.status(200).json(JSON.parse(responseContent));
   } catch (error) {
+    console.error("Groq Engine Exception Log:", error.message);
     res.status(500).json({ message: "Internal analysis loop error", error: error.message });
   }
 };
 
+// ================= DELETE LOG ENTRY =================
 exports.deleteCustomerNote = async (req, res) => {
   try {
     const { id, noteId } = req.params;
