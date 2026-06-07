@@ -28,14 +28,14 @@ export default function DetailedMatchView({ customerId, onBack }) {
       const clientIncome = parseFloat(clientData.income) || 0;
 
       const scoredPool = matchesData.map(candidate => {
-        const matchProfile = candidate.profile; 
+        const matchProfile = candidate.profile;
         if (!matchProfile) return null;
 
         if (clientData.religion?.toLowerCase() !== matchProfile.religion?.toLowerCase()) {
-          return null; 
+          return null;
         }
-        
-        let score = 50; 
+
+        let score = 50;
         const candidateAge = new Date().getFullYear() - new Date(matchProfile.dateOfBirth).getFullYear();
         const candidateHeight = parseFloat(matchProfile.height) || 160;
         const candidateIncome = parseFloat(matchProfile.income) || 0;
@@ -52,7 +52,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
           if (matchesKidsView) score += 15;
 
           if (!isYounger || !earnsLess || !isShorter) {
-            score -= 25; 
+            score -= 25;
           }
         } else {
           const isOlderOrPeer = candidateAge >= clientAge;
@@ -63,17 +63,17 @@ export default function DetailedMatchView({ customerId, onBack }) {
           }
 
           if (clientData.designation?.toLowerCase() === matchProfile.designation?.toLowerCase() ||
-              clientData.company?.toLowerCase() === matchProfile.company?.toLowerCase()) {
-            score += 15; 
+            clientData.company?.toLowerCase() === matchProfile.company?.toLowerCase()) {
+            score += 15;
           }
           if (clientData.familyValues === matchProfile.familyValues) {
-            score += 15; 
+            score += 15;
           }
           if (clientData.openToRelocate === matchProfile.openToRelocate) {
-            score += 15; 
+            score += 15;
           }
           if (clientData.wantKids === matchProfile.wantKids) {
-            score += 15; 
+            score += 15;
           }
         }
 
@@ -91,7 +91,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
       setClient(clientData);
       setJourneyStatus(clientData.journeyStatus);
-      setCandidates(top5Candidates); 
+      setCandidates(top5Candidates);
       setIsRankedByAI(false);
     } catch (err) {
       console.error("Error setting up matchmaker channels:", err);
@@ -120,7 +120,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
   const handleDeleteNote = async (noteId) => {
     try {
       await api.deleteCustomerLog(client._id, noteId);
-      await loadWorkspaceData(); 
+      await loadWorkspaceData();
     } catch (err) {
       console.error("Note deletion fault:", err);
     }
@@ -133,7 +133,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
       for (const candidate of candidates) {
         try {
-          await new Promise(resolve => setTimeout(resolve, 350)); 
+          await new Promise(resolve => setTimeout(resolve, 350));
           const response = await api.getAIMatchAnalysis({ clientId: client._id, matchId: candidate.profile._id });
           let rankExplanation = response.compatibilityScore >= 90 ? "Elite High-Potential Match" : response.compatibilityScore >= 80 ? "High Potential Match" : "Standard Potential Match";
 
@@ -168,7 +168,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
   return (
     <div className="space-y-6 px-2 sm:px-0">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-        
+
         <div className="lg:col-span-5 flex flex-col h-full space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
             <div>
@@ -179,7 +179,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                   <p className="text-xs text-gray-400 font-medium truncate">{client.gender} • {client.maritalStatus}</p>
                 </div>
               </div>
-              
+
               <div className="py-4 space-y-4 text-sm">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">Full Biodata Dossier</h4>
                 <div className="grid grid-cols-2 gap-y-3 gap-x-4">
@@ -187,7 +187,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">Height</p><p className="font-medium text-gray-800">{client.height} cm</p></div>
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">City</p><p className="font-medium text-gray-800 truncate">{client.city}</p></div>
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">Income Bracket</p><p className="font-medium text-emerald-700 font-semibold">{client.income} LPA</p></div>
-                  
+
                   <div className="col-span-2 border-t border-gray-50 pt-2">
                     <p className="text-[11px] text-gray-400 uppercase font-medium">Religion / Caste</p>
                     <p className="font-bold text-gray-800 text-xs mt-0.5 break-words">{client.religion} / {client.caste || 'None'}</p>
@@ -254,17 +254,22 @@ export default function DetailedMatchView({ customerId, onBack }) {
                 <h3 className="font-serif text-base sm:text-lg font-bold text-gray-900 mb-1 flex items-center space-x-2"><Award className="w-5 h-5 text-amber-500 shrink-0" /><span>Algorithmic Matching Results Queue</span></h3>
                 <p className="text-xs text-gray-400 font-medium leading-relaxed">Displaying targeted data-matched opposite gender choices based on matrimonial sorting rules parameters.</p>
               </div>
-              
+
               <button
                 onClick={executeBulkAIRanking}
                 disabled={loadingAI}
-                className="w-full sm:w-auto relative group overflow-hidden rounded-lg p-[1px] focus:outline-none transition-all duration-300 transform hover:scale-[1.01] active:scale-95 shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.35)] hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                className="
+                  w-full sm:w-auto relative group overflow-hidden rounded-lg p-[1px] 
+                  focus:outline-none transition-all duration-300 transform 
+                  hover:scale-[1.02] active:scale-95 shrink-0 
+                  shadow-[0_0_12px_rgba(245,158,11,0.4)] hover:shadow-[0_0_20px_rgba(245,158,11,0.6)]
+                "
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-lg animate-pulse opacity-90 blur-xs" />
                 <span className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 rounded-lg" />
-                <span className="relative flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-[7px] bg-slate-950 text-white transition-colors duration-200">
-                  <Sparkles className={`w-3.5 h-3.5 text-amber-400 ${loadingAI ? 'animate-spin' : ''}`} />
-                  <span className="bg-gradient-to-r from-amber-200 via-yellow-400 to-orange-200 bg-clip-text text-transparent font-mono font-bold text-[10px] tracking-wider uppercase whitespace-nowrap">
+                <span className="relative flex items-center justify-center space-x-2 px-5 py-2.5 rounded-[7px] bg-slate-950 text-white transition-colors duration-200">
+                  <Sparkles className={`w-4 h-4 text-amber-400 ${loadingAI ? 'animate-spin' : ''}`} />
+                  <span className="bg-gradient-to-r from-amber-200 via-yellow-400 to-orange-200 bg-clip-text text-transparent font-mono font-bold text-[11px] tracking-wider uppercase whitespace-nowrap">
                     {loadingAI ? 'AI MATCHING...' : isRankedByAI ? 'REFRESH AI MATCH' : 'MATCH BETTER WITH AI'}
                   </span>
                 </span>
@@ -275,8 +280,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
               {candidates.map((candidate) => {
                 const match = candidate.profile;
                 return (
-                  <div 
-                    key={match._id} 
+                  <div
+                    key={match._id}
                     onClick={() => setPreviewProfile(match)}
                     className="p-4 sm:p-5 border border-gray-100 bg-gray-50/50 rounded-xl flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center group hover:border-gray-200 cursor-pointer transition-all"
                   >
@@ -290,12 +295,31 @@ export default function DetailedMatchView({ customerId, onBack }) {
                     </div>
                     <div className="flex items-center space-x-3 shrink-0 w-full sm:w-auto justify-end sm:justify-start border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-100">
                       {isRankedByAI && (
-                        <div onClick={(e) => handleScoreClick(e, candidate)} className="p-2 rounded-xl text-center shadow-2xs w-14 cursor-pointer border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 shrink-0">
+                        <div
+                          onClick={(e) => handleScoreClick(e, candidate)}
+                          className="
+                            p-2 rounded-xl text-center shadow-2xs w-16 cursor-pointer 
+                            border border-amber-200 bg-amber-50 hover:bg-amber-100 
+                            text-amber-800 shrink-0 transition-all duration-300 
+                            hover:scale-[1.03] hover:shadow-md hover:border-amber-300
+                          "
+                        >
                           <p className="text-[7px] uppercase tracking-wider font-bold font-mono text-amber-600">AI Score</p>
-                          <p className="text-xs font-black font-mono tracking-tight">{candidate.aiScore}%</p>
+                          <p className="text-sm font-black font-mono tracking-tight">{candidate.aiScore}%</p>
                         </div>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); setActiveModalMatch(match); }} className="text-[11px] font-semibold bg-emerald-600 text-white px-3 py-2 rounded-xl h-10 flex items-center justify-center space-x-1 hover:bg-opacity-95 shadow-xs flex-1 sm:flex-initial"><span>Send Match</span></button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveModalMatch(match); }}
+                        className="
+                          text-[11px] font-semibold bg-emerald-600 text-white 
+                          px-3 py-2 rounded-xl h-10 flex items-center justify-center 
+                          space-x-1 shadow-xs transition-all duration-300 
+                          hover:bg-emerald-700 hover:shadow-emerald-200/50 
+                          hover:scale-105 active:scale-95 shrink-0 flex-1 sm:flex-initial
+                        "
+                      >
+                        <span>Send Match</span>
+                      </button>
                     </div>
                   </div>
                 );

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000/api'  
+  ? 'http://localhost:5000/api'
   : 'https://tdc-matchmaker-api-zteg.onrender.com/api';
 
 export const api = {
@@ -36,7 +36,7 @@ export const api = {
   },
 
   getAlgorithmicMatches: async (id) => {
-    const response = await axios.get(`${API_BASE_URL}/customers/${id}/matches`); 
+    const response = await axios.get(`${API_BASE_URL}/customers/${id}/matches`);
     return response.data;
   },
 

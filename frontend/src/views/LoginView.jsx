@@ -18,14 +18,14 @@ export default function LoginView({ onLoginSuccess }) {
 
   return (
     <div className="min-h-screen w-full grid grid-cols-1 md:grid-cols-2 bg-white overflow-x-hidden m-0 p-0">
-      
+
       <div className="hidden md:flex relative w-full h-full bg-tdc-dark items-center justify-center">
         <img src={heroImage} alt="The Date Crew Hero" className="w-full h-full object-cover opacity-90" />
       </div>
 
       <div className="w-full min-h-screen md:min-h-0 flex flex-col items-center justify-center bg-white p-6 sm:p-12 md:p-16">
         <div className="w-full max-w-sm space-y-6">
-          
+
           <div className="text-center md:text-left flex flex-col items-center md:items-start justify-center">
             <div className="w-12 h-12 rounded-full bg-tdc-logo-gold flex items-center justify-center font-serif text-white font-bold text-base tracking-tighter mb-4 shadow-xs">
               tdc
@@ -53,13 +53,13 @@ export default function LoginView({ onLoginSuccess }) {
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                   <User className="w-4 h-4" />
                 </span>
-                <input 
-                  type="text" 
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value)} 
-                  placeholder="Enter workspace identity" 
-                  className="w-full bg-gray-50 text-xs text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-tdc-logo-gold focus:bg-white transition-all" 
-                  required 
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter workspace identity"
+                  className="w-full bg-gray-50 text-xs text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-tdc-logo-gold focus:bg-white transition-all"
+                  required
                 />
               </div>
             </div>
@@ -72,19 +72,19 @@ export default function LoginView({ onLoginSuccess }) {
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                   <Lock className="w-4 h-4" />
                 </span>
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="Enter operational token" 
-                  className="w-full bg-gray-50 text-xs text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-tdc-logo-gold focus:bg-white transition-all" 
-                  required 
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter operational token"
+                  className="w-full bg-gray-50 text-xs text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-tdc-logo-gold focus:bg-white transition-all"
+                  required
                 />
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="w-full bg-tdc-green text-white text-xs font-semibold py-3 rounded-xl transition-all tracking-wide cursor-pointer mt-2 active:scale-98"
             >
               Authenticate Portal Session
