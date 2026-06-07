@@ -26,16 +26,75 @@ export default function DetailedMatchView({ customerId, onBack }) {
       const clientData = await api.getCustomerById(customerId);
       const matchesData = await api.getAlgorithmicMatches(customerId);
 
-      const initializedCandidates = matchesData.map(c => ({
-        ...c,
-        aiScore: null,
-        rankLabel: null,
-        aiExplanation: null
-      }));
+      const clientAge = new Date().getFullYear() - new Date(clientData.dateOfBirth).getFullYear();
+      const clientHeight = parseFloat(clientData.height) || 160;
+      const clientIncome = parseFloat(clientData.income) || 0;
+
+      // =================================================================
+      // STAGE 1: DYNAMIC RETRIEVAL MATRIX (AGE, HEIGHT, INCOME, RELIGION)
+      // =================================================================
+      const scoredPool = matchesData.map(candidate => {
+        const matchProfile = candidate.profile; 
+        if (!matchProfile) return { ...candidate, suitabilityScore: 0 };
+        
+        let score = 0;
+
+        // 1. Strict Religion Alignment Weight
+        if (clientData.religion?.toLowerCase() === matchProfile.religion?.toLowerCase()) {
+          score += 40; 
+        }
+
+        // 2. Age Suitability Metrics
+        const candidateAge = new Date().getFullYear() - new Date(matchProfile.dateOfBirth).getFullYear();
+        if (clientData.gender === 'Male') {
+          if (candidateAge < clientAge) score += 20; 
+        } else {
+          if (candidateAge >= clientAge) score += 20; 
+        }
+
+        // 3. Height Proximity Processing
+        const candidateHeight = parseFloat(matchProfile.height) || 160;
+        if (clientData.gender === 'Male') {
+          if (candidateHeight < clientHeight) score += 20; 
+        } else {
+          if (candidateHeight > clientHeight) score += 20;
+        }
+
+        // 4. Financial Track Parity
+        const candidateIncome = parseFloat(matchProfile.income) || 0;
+        if (clientData.gender === 'Female') {
+          if (candidateIncome >= clientIncome) score += 20; 
+        } else {
+          if (Math.abs(candidateIncome - clientIncome) <= 5) score += 20;
+        }
+
+        // 💡 EXPLICIT FIX: Overwrite matchingCriteria array to drop caste badges completely
+        const filteredCriteria = [
+          (matchProfile.religion || "").toLowerCase() === (clientData.religion || "").toLowerCase() ? "Religion Match" : null,
+          (matchProfile.city || "").toLowerCase() === (clientData.city || "").toLowerCase() ? "Location Match" : null
+        ].filter(Boolean);
+
+        return { 
+          ...candidate, 
+          suitabilityScore: score,
+          matchingCriteria: filteredCriteria // Pushes only the sanitized non-caste badges into card render
+        };
+      });
+
+      // Sort and slice down to exactly the Top 10 records
+      const top10Candidates = scoredPool
+        .sort((a, b) => b.suitabilityScore - a.suitabilityScore)
+        .slice(0, 10)
+        .map(c => ({
+          ...c,
+          aiScore: null,
+          rankLabel: null,
+          aiExplanation: null
+        }));
 
       setClient(clientData);
       setJourneyStatus(clientData.journeyStatus);
-      setCandidates(initializedCandidates);
+      setCandidates(top10Candidates); 
       setIsRankedByAI(false);
     } catch (err) {
       console.error("Error setting up matchmaker channels:", err);
@@ -66,44 +125,46 @@ export default function DetailedMatchView({ customerId, onBack }) {
   const executeBulkAIRanking = async () => {
     try {
       setLoadingAI(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const finalRankedTop10 = [];
 
-      const rankedResult = candidates.map(candidate => {
-        const matchProfile = candidate.profile;
-        let baseScore = 85;
-        
-        const customStrengths = [
-          `Excellent career trajectory velocity alignment tracking between ${client.firstName} (${client.designation}) and ${matchProfile.firstName} (${matchProfile.designation}).`
-        ];
-        const customChallenges = [];
+      // Loop sequentially through your locked top 10 to keep within Groq TPM bounds safely
+      for (const candidate of candidates) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 350)); 
 
-        if (client.religion.toLowerCase() === matchProfile.religion.toLowerCase()) {
-          baseScore += 10;
-          customStrengths.push(`Excellent cultural alignment verified inside the shared communal framework of the ${client.religion} community.`);
-        } else {
-          baseScore -= 15;
-          customChallenges.push(`Cross-cultural variance noticed: Navigating different custom frameworks (${client.religion} vs ${matchProfile.religion}).`);
+          const response = await api.getAIMatchAnalysis({
+            clientId: client._id,
+            matchId: candidate.profile._id
+          });
+
+          let rankExplanation = "Standard Potential Match";
+          if (response.compatibilityScore >= 90) rankExplanation = "Elite High-Potential Match";
+          else if (response.compatibilityScore >= 80) rankExplanation = "High Potential Match";
+
+          finalRankedTop10.push({
+            ...candidate,
+            aiScore: response.compatibilityScore,
+            rankLabel: rankExplanation,
+            aiExplanation: response
+          });
+        } catch (innerErr) {
+          console.error("Single profile evaluation error:", innerErr);
+          
+          finalRankedTop10.push({
+            ...candidate,
+            aiScore: Math.min(Math.max(candidate.suitabilityScore, 45), 95),
+            rankLabel: "Matrix Calculated Fit",
+            aiExplanation: { 
+              compatibilityScore: candidate.suitabilityScore,
+              strengths: ["Profile vectors align well across baseline structural data parameters."], 
+              challenges: ["System processing rate ceiling hit; utilizing default calculation values."] 
+            }
+          });
         }
+      }
 
-        const calculatedFinalScore = Math.min(Math.max(baseScore, 50), 97);
-        let rankExplanation = "Standard Potential Match";
-        if (calculatedFinalScore >= 90) rankExplanation = "Elite High-Potential Match";
-        else if (calculatedFinalScore >= 80) rankExplanation = "High Potential Match";
-
-        return {
-          ...candidate,
-          aiScore: calculatedFinalScore,
-          rankLabel: rankExplanation,
-          aiExplanation: {
-            compatibilityScore: calculatedFinalScore,
-            strengths: customStrengths,
-            challenges: customChallenges.length > 0 ? customChallenges : ["Coordinating career trajectory requirements alongside active corporate lifestyles."]
-          }
-        };
-      });
-
-      rankedResult.sort((a, b) => b.aiScore - a.aiScore);
-      setCandidates(rankedResult);
+      finalRankedTop10.sort((a, b) => b.aiScore - a.aiScore);
+      setCandidates(finalRankedTop10);
       setIsRankedByAI(true);
     } catch (err) {
       console.error("Global Ranking Exception:", err);
@@ -124,63 +185,66 @@ export default function DetailedMatchView({ customerId, onBack }) {
     return (
       <div className="py-20 text-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500 mx-auto mb-4"></div>
-        <p className="text-sm text-gray-500 font-medium">Assembling client profiles...</p>
+        <p className="text-sm text-gray-500 font-medium">Assembling workspace dossiers...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
-            <div className="flex items-center space-x-3 pb-4 border-b border-gray-100">
-              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-serif font-bold text-lg">
-                {client.firstName[0]}
+      {/* 💡 Grid layout forces items to align to a uniform row stretch stretched parameters */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        
+        {/* Left Side Client Dossier Sidebar Card */}
+        <div className="lg:col-span-5 flex flex-col h-full">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs flex flex-col h-full justify-between">
+            <div>
+              <div className="flex items-center space-x-3 pb-4 border-b border-gray-100">
+                <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-serif font-bold text-lg">
+                  {client.firstName[0]}
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-gray-900">{client.firstName} {client.lastName}</h3>
+                  <p className="text-xs text-gray-400 font-medium">{client.gender} • {client.maritalStatus}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-serif text-xl font-bold text-gray-900">{client.firstName} {client.lastName}</h3>
-                <p className="text-xs text-gray-400 font-medium">{client.gender} • {client.maritalStatus}</p>
-              </div>
-            </div>
 
-            <div className="py-4 space-y-4 text-sm border-b border-gray-100">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">Full Biodata Dossier</h4>
-              <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Age</p><p className="font-medium text-gray-800">{new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear()} Yrs</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Height</p><p className="font-medium text-gray-800">{client.height} cm</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">City</p><p className="font-medium text-gray-800">{client.city}</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Income Bracket</p><p className="font-medium text-emerald-700 font-semibold">{client.income} LPA</p></div>
-                <div className="col-span-2 border-t border-gray-50 pt-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Cultural Heritage Trace</p><p className="font-bold text-gray-800 text-xs mt-0.5">{client.religion} Religion • {client.caste} Lineage</p></div>
-                <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Profession</p><p className="font-medium text-gray-800 truncate">{client.designation} @ {client.company}</p></div>
-                <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Education Background</p><p className="font-medium text-gray-800 truncate text-xs">{client.degree}, {client.college}</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Dietary Preference</p><p className="font-medium text-gray-800">{client.diet}</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Family Core Values</p><p className="font-medium text-gray-800">{client.familyValues}</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Open to Relocate</p><p className="font-medium text-gray-800">{client.openToRelocate}</p></div>
-                <div><p className="text-[11px] text-gray-400 uppercase font-medium">Open to Pets</p><p className="font-medium text-gray-800">{client.openToPets}</p></div>
-                <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Wants Children</p><p className="font-medium text-gray-800">{client.wantKids}</p></div>
-                <div className="col-span-2 border-t border-gray-100 pt-3 grid grid-cols-1 gap-y-2">
-                  <div><p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Client Email</p><p className="font-medium text-slate-700 break-all text-xs mt-0.5">{client.email}</p></div>
-                  <div><p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Direct Phone / Mobile</p><p className="font-medium text-slate-700 text-xs mt-0.5">{client.phone}</p></div>
+              <div className="py-4 space-y-4 text-sm">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">Full Biodata Dossier</h4>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Age</p><p className="font-medium text-gray-800">{new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear()} Yrs</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Height</p><p className="font-medium text-gray-800">{client.height} cm</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">City</p><p className="font-medium text-gray-800">{client.city}</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Income Bracket</p><p className="font-medium text-emerald-700 font-semibold">{client.income} LPA</p></div>
+                  <div className="col-span-2 border-t border-gray-50 pt-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Cultural Heritage Trace</p><p className="font-bold text-gray-800 text-xs mt-0.5">{client.religion} Religion • {client.caste} Lineage</p></div>
+                  <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Profession</p><p className="font-medium text-gray-800 truncate">{client.designation} @ {client.company}</p></div>
+                  <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Education Background</p><p className="font-medium text-gray-800 truncate text-xs">{client.degree}, {client.college}</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Dietary Preference</p><p className="font-medium text-gray-800">{client.diet}</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Family Core Values</p><p className="font-medium text-gray-800">{client.familyValues}</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Open to Relocate</p><p className="font-medium text-gray-800">{client.openToRelocate}</p></div>
+                  <div><p className="text-[11px] text-gray-400 uppercase font-medium">Open to Pets</p><p className="font-medium text-gray-800">{client.openToPets}</p></div>
+                  <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Wants Children</p><p className="font-medium text-gray-800">{client.wantKids}</p></div>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleUpdateLogs} className="pt-4 space-y-4">
+            <form onSubmit={handleUpdateLogs} className="pt-4 border-t border-gray-100 mt-auto">
               <button type="submit" disabled={updatingLogs} className="w-full bg-emerald-600 text-white text-xs font-semibold py-2.5 rounded-xl">{updatingLogs ? 'Saving...' : 'Commit Logs Entry'}</button>
             </form>
           </div>
         </div>
 
-        <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+        {/* Right Side Matchmaker Result Queue Stream Layout */}
+        <div className="lg:col-span-7 flex flex-col h-full">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs flex flex-col h-full max-h-[680px]">
+            
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="font-serif text-lg font-bold text-gray-900 mb-1 flex items-center space-x-2">
                   <Award className="w-5 h-5 text-amber-500" />
                   <span>Algorithmic Matching Pipeline Results</span>
                 </h3>
-                <p className="text-xs text-gray-400 font-medium">Profiles filtered dynamically across core frameworks.</p>
+                <p className="text-xs text-gray-400 font-medium">Displaying the top 10 most suitable profiles filtered across age, height, income, and religion rules.</p>
               </div>
 
               <button
@@ -193,13 +257,14 @@ export default function DetailedMatchView({ customerId, onBack }) {
                 <span className="relative flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-[6px] bg-slate-950 text-white font-black text-[11px] tracking-wide transition-colors">
                   <Sparkles className={`w-3.5 h-3.5 text-amber-400 ${loadingAI ? 'animate-spin' : ''}`} />
                   <span className="bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 bg-clip-text text-transparent font-extrabold font-mono tracking-wider">
-                    {loadingAI ? 'AI Aligning...' : isRankedByAI ? 'Refresh AI Scores' : 'Find Best Match with AI'}
+                    {loadingAI ? 'AI Aligning...' : isRankedByAI ? 'Refresh AI Scores' : 'Run AI Reranking'}
                   </span>
                 </span>
               </button>
             </div>
 
-            <div className="space-y-4 max-h-[650px] overflow-y-auto pr-2">
+            {/* 💡 candidate scrolling block automatically scales, filling the explicit balance heights perfectly */}
+            <div className="space-y-4 overflow-y-auto mt-4 pr-2 flex-1 min-h-0">
               {candidates.map((candidate) => {
                 const match = candidate.profile;
                 return (
@@ -215,11 +280,6 @@ export default function DetailedMatchView({ customerId, onBack }) {
                         )}
                       </div>
                       <p className="text-xs text-gray-500 font-medium">{match.designation} at {match.company} • {match.income} LPA</p>
-                      <div className="flex flex-wrap gap-1">
-                        {candidate.matchingCriteria.map((badge, idx) => (
-                          <span key={idx} className="bg-emerald-50 text-emerald-700 text-[9px] font-semibold border border-emerald-200 rounded-md px-1.5 py-0.5">✓ {badge}</span>
-                        ))}
-                      </div>
                     </div>
 
                     <div className="flex items-center space-x-4 shrink-0 w-full sm:w-auto justify-end">
@@ -247,6 +307,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
         </div>
       </div>
 
+      {/* Keep your modals rendering intact down here... */}
+
       {selectedMatchForExplanation && aiAnalysis && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-50 px-4">
           <div className="bg-slate-950 text-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-800 relative">
@@ -268,13 +330,13 @@ export default function DetailedMatchView({ customerId, onBack }) {
                 <div className="space-y-2 bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/10">
                   <p className="font-bold text-emerald-400 text-[10px] uppercase">✦ Compatibility Strengths</p>
                   <ul className="space-y-2.5 text-gray-300 list-none pl-0">
-                    {aiAnalysis.strengths.map((s, i) => <li key={i} className="leading-relaxed">• {s}</li>)}
+                    {aiAnalysis.strengths?.map((s, i) => <li key={i} className="leading-relaxed break-words whitespace-pre-wrap">• {s}</li>)}
                   </ul>
                 </div>
                 <div className="space-y-2 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
                   <p className="font-bold text-amber-400 text-[10px] uppercase">▲ Friction Risk Assessment</p>
                   <ul className="space-y-2.5 text-gray-300 list-none pl-0">
-                    {aiAnalysis.challenges.map((c, i) => <li key={i} className="leading-relaxed">• {c}</li>)}
+                    {aiAnalysis.challenges?.map((c, i) => <li key={i} className="leading-relaxed break-words whitespace-pre-wrap">• {c}</li>)}
                   </ul>
                 </div>
               </div>

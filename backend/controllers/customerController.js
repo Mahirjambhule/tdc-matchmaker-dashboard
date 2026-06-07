@@ -1,4 +1,5 @@
 const Groq = require('groq-sdk');
+const mongoose = require('mongoose'); 
 const Customer = require('../models/Customer');
 
 exports.getAllCustomers = async (req, res) => {
@@ -44,63 +45,90 @@ exports.updateCustomerStatusAndNotes = async (req, res) => {
 // ================= BROAD ALGORITHMIC MATCHING SUITE =================
 exports.getAlgorithmicMatches = async (req, res) => {
   try {
-    const { id } = req.params;
-    const client = await Customer.findById(id);
-
+    const customerId = req.params.customerId || req.params.id; 
+    
+    const client = await Customer.findById(customerId);
     if (!client) {
-      return res.status(404).json({ message: "Client dossier not found" });
+      return res.status(404).json({ message: "Client profile not found." });
     }
 
-    const targetGender = client.gender === 'Male' ? 'Female' : 'Male';
-    
-    // CHANGED: Pulling ALL candidates of the opposite gender without a religion barrier upfront
-    const potentialMatches = await Customer.find({ gender: targetGender });
-    
-    const clientAge = new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear();
-    const verifiedMatches = [];
+    const clientReligion = (client.religion || "").toLowerCase();
+    const clientCaste = (client.caste || "").toLowerCase();
+    const clientCity = (client.city || "").toLowerCase();
 
-    for (const candidate of potentialMatches) {
-      const candidateAge = new Date().getFullYear() - new Date(candidate.dateOfBirth).getFullYear();
-      const criteriaBadges = [];
-      let isEligible = false;
-
-      if (client.gender === 'Male') {
-        // --- BASELINE MALE FILTER CRITERIA ---
-        const isYounger = candidateAge < clientAge;
-        const earnsLess = candidate.income < client.income;
-        const isShorter = candidate.height < client.height;
-        const childrenMatch = candidate.wantKids === client.wantKids;
-
-        if (isYounger && earnsLess && isShorter && childrenMatch) {
-          isEligible = true;
-          criteriaBadges.push("Younger Age", "Income Within Bracket", "Height Aligned", "Child Expectations Match");
+    const topMatches = await Customer.aggregate([
+      {
+        $match: {
+          _id: { $ne: new mongoose.Types.ObjectId(customerId) }, 
+          gender: client.gender === 'Male' ? 'Female' : 'Male',  
+          maritalStatus: client.maritalStatus
         }
-      } else {
-        // --- BASELINE FEMALE COMPATIBILITY LOGIC ---
-        const valuesMatch = candidate.familyValues === client.familyValues;
-        const relocateMatch = candidate.openToRelocate === client.openToRelocate || client.openToRelocate === 'Yes' || candidate.openToRelocate === 'Yes';
-        const professionalSync = candidate.income >= client.income;
-
-        if (valuesMatch || relocateMatch || professionalSync) {
-          isEligible = true;
-          if (valuesMatch) criteriaBadges.push(`Shared Values (${client.familyValues})`);
-          if (relocateMatch) criteriaBadges.push("Relocation Flexible");
-          if (professionalSync) criteriaBadges.push("Professional Synergy");
+      },
+      {
+        $addFields: {
+          structuralScore: {
+            $add: [
+              50, 
+              {
+                $cond: [
+                  { $eq: [ { $toLower: { $ifNull: ["$religion", ""] } }, clientReligion ] },
+                  20,
+                  0
+                ]
+              },
+              {
+                $cond: [
+                  { $eq: [ { $toLower: { $ifNull: ["$caste", ""] } }, clientCaste ] },
+                  15,
+                  0
+                ]
+              },
+              {
+                $cond: [
+                  { $eq: [ { $toLower: { $ifNull: ["$city", ""] } }, clientCity ] },
+                  10,
+                  0
+                ]
+              },
+              {
+                $cond: [
+                  { $eq: [ "$wantKids", client.wantKids ] },
+                  10,
+                  {
+                    $cond: [
+                      {
+                        $or: [
+                          { $and: [ { $eq: [ "$wantKids", "Yes" ] }, { $eq: [ client.wantKids, "No" ] } ] },
+                          { $and: [ { $eq: [ "$wantKids", "No" ] }, { $eq: [ client.wantKids, "Yes" ] } ] }
+                        ]
+                      },
+                      -25, 
+                      0
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
         }
-      }
+      },
+      { $sort: { structuralScore: -1 } }
+    ]);
 
-      if (isEligible) {
-        verifiedMatches.push({
-          profile: candidate,
-          matchingCriteria: criteriaBadges
-        });
-      }
-    }
+    const formattedMatches = topMatches.map(matchProfile => ({
+      profile: matchProfile,
+      // 💡 Fixed: Case-insensitive criteria check ensures badges like "Caste Match" render correctly
+      matchingCriteria: [
+        (matchProfile.religion || "").toLowerCase() === clientReligion ? "Religion Match" : null,
+        (matchProfile.caste || "").toLowerCase() === clientCaste ? "Caste Match" : null,
+        (matchProfile.city || "").toLowerCase() === clientCity ? "Location Match" : null
+      ].filter(Boolean)
+    }));
 
-    res.json(verifiedMatches);
-  } catch (err) {
-    console.error("Pipeline failure:", err);
-    res.status(500).json({ error: "Internal matching engine fault" });
+    res.status(200).json(formattedMatches);
+  } catch (error) {
+    console.error("Database Engine Optimization Error:", error);
+    res.status(500).json({ message: "Failed to optimize match retrieval streams", error: error.message });
   }
 };
 
@@ -118,7 +146,6 @@ exports.getAIMatchAnalysis = async (req, res) => {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    // Helper to calculate exact age strings from Date of Birth variables
     const calculateAge = (dob) => {
       if (!dob) return "N/A";
       return new Date().getFullYear() - new Date(dob).getFullYear() + " Yrs";
@@ -138,7 +165,6 @@ exports.getAIMatchAnalysis = async (req, res) => {
       • Academic Foundation: Degree: ${client.degree} | College: ${client.college}
       • Socio-Demographics: Location: ${client.city}, ${client.country || 'India'} | Marital Status: ${client.maritalStatus} | Siblings: ${client.siblings || 'None'}
       • Future Core Preferences: Wants Kids: ${client.wantKids} | Open to Relocate: ${client.openToRelocate} | Open to Pets: ${client.openToPets}
-      • Contact Registry (For System Ref): Email: ${client.email} | Phone: ${client.phone}
 
       ===================================================================
       CLIENT B (POTENTIAL MATCH CANDIDATE)
@@ -150,39 +176,27 @@ exports.getAIMatchAnalysis = async (req, res) => {
       • Academic Foundation: Degree: ${match.degree} | College: ${match.college}
       • Socio-Demographics: Location: ${match.city}, ${match.country || 'India'} | Marital Status: ${match.maritalStatus} | Siblings: ${match.siblings || 'None'}
       • Future Core Preferences: Wants Kids: ${match.wantKids} | Open to Relocate: ${match.openToRelocate} | Open to Pets: ${match.openToPets}
-      • Contact Registry (For System Ref): Email: ${match.email} | Phone: ${match.phone}
 
       ===================================================================
       STRICT EVALUATION MANDATE PROTOCOLS
       ===================================================================
-      1. compatibilityScore Calculation: 
-         - Compute an integer between 45 and 98.
-         - Reward heavily (+10 to +15 points) for shared Religion and Caste lineage sync.
-         - Evaluate background synergy, location layout metrics, future life goals (Kids/Relocation), and professional tracks.
-         - Apply calculated penalties if there are clear contradictions (e.g., if one explicitly wants kids and the other doesn't, or severe income/location mismatches).
-
-      2. Detailed Strengths:
-         - Provide exactly three highly detailed, professional sentences.
-         - Sentence 1 must evaluate their professional status, educational benchmarks, and career synergy.
-         - Sentence 2 must evaluate cultural alignment, ancestral lineage parameters (Religion/Caste), and language compatibility.
-         - Sentence 3 must evaluate lifestyle choices, family integration (Siblings/Marital status), and core future paths (Kids/Pets/Relocation).
-         - Always use explicit names to keep the output highly tailored.
-
+      1. compatibilityScore Calculation: Compute an integer between 45 and 98. Calculate this dynamically based on data. Reward heavily (+10 to +15 points) for shared Religion and Caste lineage sync.
+      2. Detailed Strengths: Provide exactly three highly detailed sentences using their explicit first names. Sentence 1 logs professional status, Sentence 2 logs cultural lineage metrics, and Sentence 3 logs core preference alignment.
       3. Friction Risk Assessment (Challenges):
-         - Provide exactly two analytical sentences flagging structural differences.
-         - Detail geographic proximity elements (City/Country gaps), professional timeline balances, or variance in preference layouts.
-
-      Return ONLY a clean JSON object following this exact syntax scheme. Do not provide prose preamble or markdown labels outside the JSON block:
+      - Provide exactly two analytical sentences flagging structural differences.
+      - Detail active friction parameters like geographic proximity elements (ONLY if they live in DIFFERENT cities or countries), professional timeline balances, or variance in preference layouts.
+      - CRITICAL: If both individuals live in the same city, DO NOT call it a challenge or state that it lacks geographical diversity. Proximity is a strength. Instead, focus on minor professional timeline gaps or lifestyle differences.
+      Return ONLY a raw, unquoted JSON object matching the JSON schema format below. Do NOT use placeholder values from the example layout schema directly; compute the compatibilityScore value completely dynamically from your analysis:
       {
-        "compatibilityScore": 92,
+        "compatibilityScore": YOUR_DYNAMICALLY_CALCULATED_INTEGER_HERE,
         "strengths": [
-          "First highly detailed professional sentence analyzing workspace, degrees, and earnings.",
-          "Second highly detailed cultural sentence analyzing lineage, religion, caste, and communication compatibility.",
-          "Third highly detailed preference sentence analyzing future tracks regarding relocation, domestic layouts, and family expansion parameters."
+          "Sentence 1 detailing professional workspace metrics.",
+          "Sentence 2 detailing cultural religion and caste lineage sync.",
+          "Sentence 3 detailing lifestyle choice layouts."
         ],
         "challenges": [
-          "First analytical friction challenge sentence tracking structural differences.",
-          "Second analytical friction challenge sentence evaluating long-term lifestyle adjustment notes."
+          "Sentence 1 detailing geographic or background friction metrics.",
+          "Sentence 2 detailing long-term adjustment notes."
         ]
       }
     `;
@@ -190,14 +204,12 @@ exports.getAIMatchAnalysis = async (req, res) => {
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.1-8b-instant',
-      temperature: 0.3, // Lower temperature forces deterministic, analytical reasoning outputs
+      temperature: 0.4, // Slight increase allows the model to calculate varied scores naturally
       response_format: { type: "json_object" }
     });
 
     const responseText = chatCompletion.choices[0].message.content.trim();
-    const analysisData = JSON.parse(responseText);
-
-    res.status(200).json(analysisData);
+    res.status(200).json(JSON.parse(responseText));
   } catch (error) {
     console.error("Groq Prompt Pipeline Intercept Error:", error.message);
     res.status(500).json({ message: "Internal analysis loop error", error: error.message });

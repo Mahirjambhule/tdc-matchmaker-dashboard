@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000/api'  // 👈 Point to your local port (5000 or whatever your backend server.js runs on)
+  ? 'http://localhost:5000/api'  
   : 'https://tdc-matchmaker-api-zteg.onrender.com/api';
 
 export const api = {
@@ -13,7 +13,7 @@ export const api = {
 
   getCustomerById: async (id) => {
     const response = await fetch(`${API_BASE_URL}/customers/${id}`);
-    if (!response.ok) throw new Error('Failed to load student/client profile data');
+    if (!response.ok) throw new Error('Failed to load profile data');
     return response.json();
   },
 
@@ -27,15 +27,12 @@ export const api = {
     return response.json();
   },
 
-  // Make sure it is hitting your dynamic route parameter precisely:
-getAlgorithmicMatches: async (id) => {
-  const response = await axios.get(`${API_BASE_URL}/customers/${id}/matches`); // Or whatever your route string is named
-  return response.data;
-},
+  getAlgorithmicMatches: async (id) => {
+    const response = await axios.get(`${API_BASE_URL}/customers/${id}/matches`); 
+    return response.data;
+  },
 
-  // Inside your frontend src/api.js file
   getAIMatchAnalysis: async ({ clientId, matchId }) => {
-    // Pass the data object payload straight to your updated Express endpoint
     const response = await axios.post(`${API_BASE_URL}/customers/ai/analyze`, { clientId, matchId });
     return response.data;
   }
