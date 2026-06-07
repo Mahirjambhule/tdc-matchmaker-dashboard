@@ -1,4 +1,8 @@
-const API_BASE_URL = 'https://tdc-matchmaker-api-zteg.onrender.com/api';
+import axios from 'axios';
+
+const API_BASE_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000/api'  // 👈 Point to your local port (5000 or whatever your backend server.js runs on)
+  : 'https://tdc-matchmaker-api-zteg.onrender.com/api';
 
 export const api = {
   getCustomers: async () => {
@@ -23,19 +27,16 @@ export const api = {
     return response.json();
   },
 
-  getAlgorithmicMatches: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/customers/${id}/matches`);
-    if (!response.ok) throw new Error('Failed executing backend matrix filtering calculations');
-    return response.json();
-  },
+  // Make sure it is hitting your dynamic route parameter precisely:
+getAlgorithmicMatches: async (id) => {
+  const response = await axios.get(`${API_BASE_URL}/customers/${id}/matches`); // Or whatever your route string is named
+  return response.data;
+},
 
-  getAIMatchAnalysis: async (clientId, matchId) => {
-    const response = await fetch(`${API_BASE_URL}/customers/ai-analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId, matchId })
-    });
-    if (!response.ok) throw new Error('Gemini profiling query crashed');
-    return response.json();
+  // Inside your frontend src/api.js file
+  getAIMatchAnalysis: async ({ clientId, matchId }) => {
+    // Pass the data object payload straight to your updated Express endpoint
+    const response = await axios.post(`${API_BASE_URL}/customers/ai/analyze`, { clientId, matchId });
+    return response.data;
   }
 };

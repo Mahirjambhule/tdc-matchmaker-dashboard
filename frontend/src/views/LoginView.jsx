@@ -17,19 +17,19 @@ export default function LoginView({ onLoginSuccess }) {
   };
 
   return (
-<div className="h-screen w-screen grid grid-cols-1 md:grid-cols-2 bg-white overflow-hidden m-0 p-0">      {/* ================= LEFT SIDE: FIXED IMAGE PANEL (Perfectly Centered Content) ================= */}
+    <div className="h-screen w-screen grid grid-cols-1 md:grid-cols-2 bg-white overflow-hidden m-0 p-0">      {/* ================= LEFT SIDE: FIXED IMAGE PANEL (Perfectly Centered Content) ================= */}
       <div className="hidden md:flex relative w-full h-full bg-tdc-dark items-center justify-center">
-      <img 
-  src={heroImage} 
-  alt="The Date Crew Hero Connection" 
-  className="w-full h-full object-cover opacity-90"
-/>
+        <img
+          src={heroImage}
+          alt="The Date Crew Hero Connection"
+          className="w-full h-full object-cover opacity-90"
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10 pointer-events-none" />
       </div>
 
       <div className="w-full h-full flex flex-col items-center justify-center bg-white p-8 sm:p-12 md:p-16">
         <div className="w-full max-w-sm space-y-6 animate-fadeIn">
-          
+
           <div className="text-center md:text-left flex flex-col items-center md:items-start justify-center">
             <div className="w-12 h-12 rounded-full bg-tdc-logo-gold flex items-center justify-center font-serif text-white font-bold text-base tracking-tighter mb-4 shadow-xs">
               tdc
@@ -100,10 +100,10 @@ export default function LoginView({ onLoginSuccess }) {
               </span>
             </div>
           </form>
-          
+
         </div>
       </div>
-      
+
     </div>
   );
 }

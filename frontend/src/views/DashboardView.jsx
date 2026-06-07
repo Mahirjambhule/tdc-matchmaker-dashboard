@@ -33,7 +33,7 @@ export default function DashboardView({ onSelectCustomer, refreshTrigger }) {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(c => 
+      result = result.filter(c =>
         `${c.firstName} ${c.lastName}`.toLowerCase().includes(query) ||
         c.city.toLowerCase().includes(query)
       );
@@ -127,7 +127,7 @@ export default function DashboardView({ onSelectCustomer, refreshTrigger }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCustomers.map((customer) => (
-          <div 
+          <div
             key={customer._id}
             onClick={() => onSelectCustomer(customer._id)}
             className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs hover:shadow-md hover:border-tdc-logo-gold transition-all duration-200 cursor-pointer overflow-hidden flex flex-col group justify-between space-y-4 transform hover:-translate-y-0.5"

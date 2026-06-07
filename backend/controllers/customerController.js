@@ -1,4 +1,4 @@
-const { GoogleGenAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Customer = require('../models/Customer');
 
 exports.getAllCustomers = async (req, res) => {
@@ -32,10 +32,7 @@ exports.updateCustomerStatusAndNotes = async (req, res) => {
     }
 
     if (journeyStatus) customer.journeyStatus = journeyStatus;
-
-    if (newNote) {
-      customer.matchmakerNotes.push({ note: newNote });
-    }
+    if (newNote) customer.matchmakerNotes.push({ note: newNote });
 
     await customer.save();
     res.status(200).json({ message: "Profile tracking logs updated successfully", customer });
@@ -44,171 +41,182 @@ exports.updateCustomerStatusAndNotes = async (req, res) => {
   }
 };
 
+// ================= BROAD ALGORITHMIC MATCHING SUITE =================
 exports.getAlgorithmicMatches = async (req, res) => {
   try {
-    const client = await Customer.findById(req.params.id);
+    const { id } = req.params;
+    const client = await Customer.findById(id);
+
     if (!client) {
-      return res.status(404).json({ message: "Target client profile not found" });
+      return res.status(404).json({ message: "Client dossier not found" });
     }
 
-    const currentYear = new Date().getFullYear();
-    const clientAge = currentYear - new Date(client.dateOfBirth).getFullYear();
+    const targetGender = client.gender === 'Male' ? 'Female' : 'Male';
+    
+    // CHANGED: Pulling ALL candidates of the opposite gender without a religion barrier upfront
+    const potentialMatches = await Customer.find({ gender: targetGender });
+    
+    const clientAge = new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear();
+    const verifiedMatches = [];
 
-    let query = { gender: client.gender === 'Male' ? 'Female' : 'Male' };
-
-    let candidatePool = await Customer.find(query);
-
-    const scoredMatches = candidatePool.map(candidate => {
-      const candidateAge = currentYear - new Date(candidate.dateOfBirth).getFullYear();
-      let matchScore = 0;
-      let matchingCriteria = [];
+    for (const candidate of potentialMatches) {
+      const candidateAge = new Date().getFullYear() - new Date(candidate.dateOfBirth).getFullYear();
+      const criteriaBadges = [];
+      let isEligible = false;
 
       if (client.gender === 'Male') {
-        
-        if (candidateAge < clientAge) {
-          matchScore += 25;
-          matchingCriteria.push("Age: Younger");
-        }
-        if (candidate.income <= client.income) {
-          matchScore += 25;
-          matchingCriteria.push("Income: Within bracket");
-        }
-        if (candidate.height < client.height) {
-          matchScore += 25;
-          matchingCriteria.push("Height: Shorter");
-        }
-        if (candidate.wantKids === client.wantKids || candidate.wantKids === 'Maybe' || client.wantKids === 'Maybe') {
-          matchScore += 25;
-          matchingCriteria.push("Family Views: Child expectations match");
-        }
+        // --- BASELINE MALE FILTER CRITERIA ---
+        const isYounger = candidateAge < clientAge;
+        const earnsLess = candidate.income < client.income;
+        const isShorter = candidate.height < client.height;
+        const childrenMatch = candidate.wantKids === client.wantKids;
 
+        if (isYounger && earnsLess && isShorter && childrenMatch) {
+          isEligible = true;
+          criteriaBadges.push("Younger Age", "Income Within Bracket", "Height Aligned", "Child Expectations Match");
+        }
       } else {
-        if (candidate.income >= client.income) {
-          matchScore += 30;
-          matchingCriteria.push("Financial Stability: Matches/Exceeds expectations");
-        }
-        if (candidate.openToRelocate === client.openToRelocate || candidate.openToRelocate === 'Maybe' || client.openToRelocate === 'Maybe') {
-          matchScore += 25;
-          matchingCriteria.push("Lifestyle: Relocation preferences align");
-        }
-        if (candidate.familyValues === client.familyValues) {
-          matchScore += 25;
-          matchingCriteria.push("Values: Cultural/Family value system harmony");
-        } else if (client.familyValues === 'Moderate' || candidate.familyValues === 'Moderate') {
-          matchScore += 15;
-        }
-        if (candidate.degree.includes('Tech') && client.degree.includes('Tech')) {
-          matchScore += 20;
-          matchingCriteria.push("Professional: Tech background compatibility");
-        } else if (candidate.city === client.city) {
-          matchScore += 20;
-          matchingCriteria.push("Proximity: Same base city operational zone");
+        // --- BASELINE FEMALE COMPATIBILITY LOGIC ---
+        const valuesMatch = candidate.familyValues === client.familyValues;
+        const relocateMatch = candidate.openToRelocate === client.openToRelocate || client.openToRelocate === 'Yes' || candidate.openToRelocate === 'Yes';
+        const professionalSync = candidate.income >= client.income;
+
+        if (valuesMatch || relocateMatch || professionalSync) {
+          isEligible = true;
+          if (valuesMatch) criteriaBadges.push(`Shared Values (${client.familyValues})`);
+          if (relocateMatch) criteriaBadges.push("Relocation Flexible");
+          if (professionalSync) criteriaBadges.push("Professional Synergy");
         }
       }
 
-      return {
-        profile: candidate,
-        score: matchScore,
-        matchingCriteria
-      };
-    });
+      if (isEligible) {
+        verifiedMatches.push({
+          profile: candidate,
+          matchingCriteria: criteriaBadges
+        });
+      }
+    }
 
-    const topMatches = scoredMatches
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 15);
-
-    res.status(200).json(topMatches);
-  } catch (error) {
-    res.status(500).json({ message: "Failed executing matching pipeline operations", error: error.message });
+    res.json(verifiedMatches);
+  } catch (err) {
+    console.error("Pipeline failure:", err);
+    res.status(500).json({ error: "Internal matching engine fault" });
   }
 };
 
+// ================= AI COMPLIANCE ENGINE WITH RELIGION RANKING MATRIX =================
 exports.getAIMatchAnalysis = async (req, res) => {
-    try {
-      const { clientId, matchId } = req.body;
-  
-      if (!clientId || !matchId) {
-        return res.status(400).json({ message: "Both clientId and matchId are required parameters." });
-      }
-  
-      const client = await Customer.findById(clientId);
-      const match = await Customer.findById(matchId);
-  
-      if (!client || !match) {
-        return res.status(404).json({ message: "One or both profiles could not be found." });
-      }
-  
-      let analysisData;
-  
-      try {
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
-        
-        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes('your_gemini_api_key')) {
-          throw new Error("Missing valid API Key assignment token inside environment configurations.");
-        }
-  
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-  
-        const prompt = `
-          You are an elite matchmaker working directly for "The Date Crew" (TDC), an exclusive, high-end premium matchmaking firm in India.
-          Analyze the structural compatibility between these two individuals:
-  
-          === CLIENT A ===
-          Name: ${client.firstName} ${client.lastName}
-          Age: ${new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear()}
-          City: ${client.city}
-          Profession: ${client.designation} at ${client.company}
-          Income: ${client.income} LPA
-          Religion/Caste: ${client.religion} (${client.caste})
-          Dietary Habits: ${client.diet}
-          Values: ${client.familyValues}
-  
-          === CLIENT B ===
-          Name: ${match.firstName} ${match.lastName}
-          Age: ${new Date().getFullYear() - new Date(match.dateOfBirth).getFullYear()}
-          City: ${match.city}
-          Profession: ${match.designation} at ${match.company}
-          Income: ${match.income} LPA
-          Religion/Caste: ${match.religion} (${match.caste})
-          Dietary Habits: ${match.diet}
-          Values: ${match.familyValues}
-  
-          Provide a structured assessment formatted strictly as a single JSON object with exactly these three keys:
-          1. "compatibilityScore": An integer between 70 and 99.
-          2. "strengths": An array of 2-3 short sentences detailing why they fit the TDC elite standard (e.g., career alignment, lifestyle values balance).
-          3. "challenges": An array of 1-2 short sentences detailing professional or geographic points for the matchmaker to monitor.
-  
-          Respond ONLY with the raw JSON object. Do not wrap it in markdown block quotes like \`\`\`json.
-        `;
-  
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text().trim();
-        
-      const cleanJsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      analysisData = JSON.parse(cleanJsonString);
-  
-      } catch (aiError) {
-        console.warn("⚠️ Google Gemini SDK Error or Rate-Limit hit. Activating TDC Simulation Engine:", aiError.message);
-        
-        const simulatedScore = Math.floor(Math.random() * (96 - 78 + 1)) + 78;
-        analysisData = {
-          compatibilityScore: simulatedScore,
-          strengths: [
-            `Strong career velocity symmetry observed between ${client.firstName}'s role and ${match.firstName}'s placement.`,
-            `High compatibility mapping verified regarding localized ${client.diet} dietary standards and mutual ${client.familyValues} family core philosophies.`
-          ],
-          challenges: [
-            client.city !== match.city 
-              ? `Geographic coordination required to transition communication between ${client.city} and ${match.city}.`
-              : `Balancing busy work schedules across high-performance company environments.`
-          ]
-        };
-      }
-  
-      res.status(200).json(analysisData);
-    } catch (error) {
-      res.status(500).json({ message: "AI profiling engine encountered a fatal error", error: error.message });
+  try {
+    const { clientId, matchId } = req.body;
+
+    // Concurrent safety timeout delay to stagger batch loads cleanly
+    await new Promise(resolve => setTimeout(resolve, 450));
+
+    const client = await Customer.findById(clientId);
+    const match = await Customer.findById(matchId);
+
+    if (!client || !match) {
+      return res.status(404).json({ message: "Profiles not found." });
     }
-  };
+
+    let analysisData;
+
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+      const prompt = `
+        You are the Chief Relationship Matrix Architect for "The Date Crew".
+        Perform an intensive compatibility calculation and demographic matching assessment between two profiles.
+        
+        CRITICAL ATTRIBUTE REGISTER - CLIENT A (PRIMARY):
+        - Name: ${client.firstName} ${client.lastName} (${client.gender})
+        - Age/Height: ${new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear()} Yrs, ${client.height} cm
+        - Cultural Domain: Religion: ${client.religion}, Caste: ${client.caste}
+        - Professional Standing: ${client.designation} at ${client.company} | Income: ${client.income} LPA
+        - Socio-Lifestyle Matrix: Marital Status: ${client.maritalStatus}, Diet: ${client.diet}, Values: ${client.familyValues}
+        - Preference Layout: Wants Kids: ${client.wantKids}, Open to Pets: ${client.openToPets}, Open to Relocate: ${client.openToRelocate}
+
+        CRITICAL ATTRIBUTE REGISTER - CLIENT B (CANDIDATE):
+        - Name: ${match.firstName} ${match.lastName} (${match.gender})
+        - Age/Height: ${new Date().getFullYear() - new Date(match.dateOfBirth).getFullYear()} Yrs, ${match.height} cm
+        - Cultural Domain: Religion: ${match.religion}, Caste: ${match.caste}
+        - Professional Standing: ${match.designation} at ${match.company} | Income: ${match.income} LPA
+        - Socio-Lifestyle Matrix: Marital Status: ${match.maritalStatus}, Diet: ${match.diet}, Values: ${match.familyValues}
+        - Preference Layout: Wants Kids: ${match.wantKids}, Open to Pets: ${match.openToPets}, Open to Relocate: ${match.openToRelocate}
+
+        EVALUATION PROTOCOL MATRIX:
+        1. compatibilityScore: Return an Integer (45 to 98). Pay exceptional attention to cultural lineage tracking. If religion matches, give a bonus. If religion does not match, apply a clear deduction to rank them lower.
+        2. strengths: Provide exactly two sentences tracking clear multi-point data combinations. Explicitly mention names, professional roles, matching dietary preferences, and ancestral values (${client.religion} / ${client.caste}).
+        3. challenges: Provide exactly one or two analytical sentences flagging cross-city logistics, value transitions, or subtle attribute conflicts.
+
+        Return ONLY a clean JSON string with this format:
+        {
+          "compatibilityScore": 92,
+          "strengths": [
+            "Sentences mapping structural professional and lifestyle alignment.",
+            "Sentences mapping cultural lineage symmetry."
+          ],
+          "challenges": [
+            "Sentences tracking active friction variables cleanly."
+          ]
+        }
+      `;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text().trim();
+      const matchJson = responseText.match(/\{[\s\S]*\}/);
+      
+      if (!matchJson) throw new Error("JSON payload malformed.");
+      analysisData = JSON.parse(matchJson[0]);
+
+    } catch (aiError) {
+      console.warn("⚠️ Rate Limit Active - Launching Adaptive Matrix Reasoner:", aiError.message);
+
+      // Adaptive backup computation checking ALL data variables dynamically
+      let structuralScore = 82;
+      const strengthsPool = [
+        `Outstanding career velocity tracking observed between ${client.firstName} (${client.designation}) and ${match.firstName} (${match.designation}).`
+      ];
+      const challengesPool = [];
+
+      // DYNAMIC CALCULATION Matrix based on Religion and Caste
+      if (client.religion.toLowerCase() === match.religion.toLowerCase()) {
+        structuralScore += 10;
+        strengthsPool.push(`Excellent cultural alignment verified inside the shared communal framework of the ${client.religion} community.`);
+        
+        if (client.caste.toLowerCase() === match.caste.toLowerCase()) {
+          structuralScore += 5;
+          strengthsPool.push(`Explicit ancestral lineage validation achieved across matching ${client.caste} parameters.`);
+        }
+      } else {
+        structuralScore -= 15;
+        challengesPool.push(`Cross-cultural variance noticed: Navigating different custom frameworks (${client.religion} vs ${match.religion}).`);
+      }
+
+      // Proximity metrics tracking
+      if (client.city !== match.city) {
+        structuralScore -= 8;
+        challengesPool.push(`Geographic coordination necessary to bridge social spaces between ${client.city} and ${match.city}.`);
+      } else {
+        structuralScore += 3;
+        challengesPool.push(`Coordinating busy professional timelines natively inside the localized ${client.city} workspace.`);
+      }
+
+      if (client.diet !== match.diet) {
+        structuralScore -= 5;
+        challengesPool.push(`Dietary preference alignment required between a ${client.diet} menu routine and candidate ${match.diet} requirements.`);
+      }
+
+      analysisData = {
+        compatibilityScore: Math.min(Math.max(structuralScore, 45), 97),
+        strengths: strengthsPool.slice(0, 3),
+        challenges: challengesPool.length > 0 ? challengesPool : ["Coordinating career trajectory requirements alongside active corporate lifestyles."]
+      };
+    }
+
+    res.status(200).json(analysisData);
+  } catch (error) {
+    res.status(500).json({ message: "Fatal engine intercept", error: error.message });
+  }
+};

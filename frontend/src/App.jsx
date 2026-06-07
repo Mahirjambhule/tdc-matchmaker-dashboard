@@ -7,8 +7,8 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('tdc_session_active') === 'true';
   });
-  
-  const [currentView, setCurrentView] = useState('list'); 
+
+  const [currentView, setCurrentView] = useState('list');
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [savedScrollY, setSavedScrollY] = useState(0);
 
@@ -82,7 +82,7 @@ export default function App() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         <div className={currentView === 'list' ? 'block space-y-4 animate-fadeIn' : 'hidden'}>
           <div>
             <h2 className="font-serif text-2xl font-bold text-tdc-dark">Assigned Client Directory</h2>
@@ -93,16 +93,16 @@ export default function App() {
 
         {currentView === 'detail' && (
           <div className="space-y-4 animate-fadeIn">
-            <button 
-              onClick={navigateToList} 
+            <button
+              onClick={navigateToList}
               className="text-xs bg-white hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2 rounded-xl border border-gray-200 shadow-2xs transition-all inline-block"
             >
               ← Return to Client Directory
             </button>
-            <DetailedMatchView key={selectedCustomerId} customerId={selectedCustomerId} onBack={navigateToList} />
+            <DetailedMatchView key={selectedCustomerId} customerId={selectedCustomerId} onBack={navigateToList} onNavigateToProfile={navigateToDetail} />
           </div>
         )}
-        
+
       </main>
     </div>
   );
