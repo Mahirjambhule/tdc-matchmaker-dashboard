@@ -98,7 +98,6 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
       const rankedResult = await Promise.all(rankingPromises);
 
-      // Force high-to-low ranking sort matrix
       rankedResult.sort((a, b) => {
         if (a.aiScore === "ERR") return 1;
         if (b.aiScore === "ERR") return -1;
@@ -157,7 +156,10 @@ export default function DetailedMatchView({ customerId, onBack }) {
                 <div><p className="text-[11px] text-gray-400 uppercase font-medium">City</p><p className="font-medium text-gray-800">{client.city}</p></div>
                 <div><p className="text-[11px] text-gray-400 uppercase font-medium">Income Bracket</p><p className="font-medium text-emerald-700 font-semibold">{client.income} LPA</p></div>
                 
-                <div className="col-span-2 border-t border-gray-50 pt-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Cultural Heritage Trace</p><p className="font-bold text-gray-800 text-xs mt-0.5">{client.religion} Religion • {client.caste} Lineage</p></div>
+                <div className="col-span-2 border-t border-gray-50 pt-2">
+                  <p className="text-[11px] text-gray-400 uppercase font-medium">Cultural Heritage Trace</p>
+                  <p className="font-bold text-gray-800 text-xs mt-0.5">{client.religion} Religion • {client.caste} Lineage</p>
+                </div>
 
                 <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Profession</p><p className="font-medium text-gray-800 truncate">{client.designation} @ {client.company}</p></div>
                 <div className="col-span-2"><p className="text-[11px] text-gray-400 uppercase font-medium">Education Background</p><p className="font-medium text-gray-800 truncate text-xs">{client.degree}, {client.college}</p></div>
@@ -175,7 +177,9 @@ export default function DetailedMatchView({ customerId, onBack }) {
             </div>
 
             <form onSubmit={handleUpdateLogs} className="pt-4 space-y-4">
-              <button type="submit" disabled={updatingLogs} className="w-full bg-tdc-green text-white text-xs font-semibold py-2.5 rounded-xl">{updatingLogs ? 'Saving updates...' : 'Commit Logs Entry'}</button>
+              <button type="submit" disabled={updatingLogs} className="w-full bg-tdc-green text-white text-xs font-semibold py-2.5 rounded-xl">
+                {updatingLogs ? 'Saving updates...' : 'Commit Logs Entry'}
+              </button>
             </form>
           </div>
         </div>
@@ -224,7 +228,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                         <span className="text-xs text-gray-400">({new Date().getFullYear() - new Date(match.dateOfBirth).getFullYear()} Yrs, {match.city})</span>
                         
                         {isRankedByAI && candidate.rankLabel && (
-                          <span className={`font-mono font-bold text-[9px] px-2 py-0.5 rounded-md tracking-wider border bg-slate-900 text-tdc-text-gold border-white/10`}>
+                          <span className="font-mono font-bold text-[9px] px-2 py-0.5 rounded-md tracking-wider border bg-slate-900 text-tdc-text-gold border-white/10">
                             {candidate.rankLabel}
                           </span>
                         )}
@@ -243,8 +247,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
                       {isRankedByAI && (
                         <div 
                           onClick={(e) => handleScoreClick(e, candidate)}
-                          className={`p-2.5 rounded-xl text-center shadow-xs transition-all shrink-0 w-16 cursor-pointer border bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800`}
-                          title="Click to view full dynamic match matrix reasoning"
+                          className="p-2.5 rounded-xl text-center shadow-xs transition-all shrink-0 w-16 cursor-pointer border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800"
+                          title="Click to view full data matrix review analysis details"
                         >
                           <p className="text-[8px] uppercase tracking-wider font-bold font-mono text-amber-600">AI Score</p>
                           <p className="text-sm font-black font-mono tracking-tight">{candidate.aiScore}%</p>
@@ -342,7 +346,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
             
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-full bg-tdc-cream text-tdc-logo-gold flex items-center justify-center font-serif font-bold text-sm">{previewProfile.firstName[0]}</div>
+                <div className="w-8 h-8 rounded-full bg-tdc-cream flex items-center justify-center font-serif font-bold text-sm">{previewProfile.firstName[0]}</div>
                 <div>
                   <h4 className="font-serif text-base font-bold text-tdc-dark">{previewProfile.firstName} {previewProfile.lastName}</h4>
                   <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Comprehensive Candidate Dossier</p>
