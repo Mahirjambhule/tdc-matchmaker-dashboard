@@ -1,28 +1,26 @@
-# 🚀 TDC - Matchmaker Portal
+The Date Crew: Intelligent Matchmaking Portal
+The Date Crew is an internal management portal designed to streamline the matchmaking process. It transforms a complex, manual database of client biodatas into an intelligent, data-driven workspace. By combining structured filtering with AI-assisted analysis, the platform helps matchmakers move from administrative overhead to high-quality human decision-making.
 
-An internal matchmaking dashboard for **The Date Crew (TDC)**. It connects local database filters with Advanced AI to optimize candidate matching.
+🔗 Access the Portal
+Live Hosted Link: [Insert your Vercel/Render URL here]
 
-## 🔗 Live Link
-👉 **[tdc-matchmaker-dashboard-bay.vercel.app](https://tdc-matchmaker-dashboard-bay.vercel.app)**
+GitHub Repository: [Insert your GitHub URL here]
 
----
+🔑 Sample Login Credentials
+Use the following credentials to access the matchmaker dashboard:
 
-## 🌟 Core Features
+Matchmaker ID: matchmaker
 
-* **Secure Auth Login:** Protected admin portal space using credentials `matchmaker` / `tdc2026`.
-* **Client Directory Matrix:** Instant text searching by **Name** or **City** alongside swift filters for **Gender** and **Journey Status**.
-* **Strict 5-Candidate Auto-Filters:** Automatically limits search screens to the top 5 matches with a strict same-religion layout requirement:
-  * **For Men:** Filters for women who are younger, earn less, are shorter, and share matching views on children.
-  * **For Women:** Filters for career synergy, shared values, and long-term relocation preferences.
-* **"Match Better with AI" Action Glow:** A neon-glowing trigger button that prompts **Groq Llama-3.1** models to rank choices by percentage metrics.
-* **Logic Audit Breakdowns:** Clicking a percentage score maps a window explicitly outlining calculated **Strengths** and **Friction Risks**.
-* **Interactive Consultation Logs:** Allows staff to update client milestones, submit timestamped timeline logs, or delete old entries instantly.
-* **Full Dossier Previews:** Clicking any candidate card layout launches a modal showing deep background data fields (Education, Income, Diet, Pets).
+Secure Token: tdc2026
 
----
+Project Overview
+Tech Choices
+We built this platform using the MERN stack (MongoDB, Express, React, Node.js) to ensure a high-speed, scalable data flow. MongoDB was chosen for its flexibility with complex user objects, allowing us to store and query diverse biodata attributes efficiently. On the frontend, we utilized React with Tailwind CSS and Lucide-react icons, focusing on a responsive, professional UI that allows matchmakers to move quickly across devices without being overwhelmed by data.
 
-## 🛠️ Tech Stack
+Matching Logic & AI Integration
+The matching process operates in two stages. First, our database-side aggregation pipeline performs a "Structural Audit." It enforces non-negotiable filters like religious alignment, then calculates a suitability score based on key parameters like age-peer compatibility, height, and income alignment. This ensures that every result is demographically sound.
 
-* **Frontend:** React, Tailwind CSS, Lucide Icons, Axios, Vercel
-* **Backend:** Node.js, Express.js, Groq SDK, Render
-* **Database:** MongoDB Atlas & Mongoose
+Second, we utilize the Groq Llama-3.1 model to act as a "Relationship Matrix Architect." Once the algorithmic list is generated, the AI performs a deep-dive analysis on the top candidates. Instead of just looking at stats, the AI evaluates professional synergies and lifestyle alignment to provide a natural-language breakdown of strengths and potential friction points. This setup gives our matchmakers the best of both worlds: the raw efficiency of machine speed and the nuance of intelligent, qualitative analysis.
+
+Assumptions Made
+We assumed that for our specific demographic, the age-peer relationship is a primary indicator of long-term compatibility, which is why our algorithm applies a heavier weight to age parity than other factors. We also assumed that income alignment is a core stability metric, so the system prioritizes candidates whose financial profiles are within a close range to the client's. Additionally, we assume that religious alignment is a foundational requirement for our user base, which is why it is implemented as a strict, non-negotiable filter at the start of every search. Finally, we operated on the assumption that a matchmaker’s time is best spent interpreting data rather than manually finding it, which guided our focus on building a clean, intuitive, and "AI-first" interface.
