@@ -4,7 +4,6 @@ const Customer = require('./models/Customer');
 
 dotenv.config();
 
-// HEAVILY EXPANDED culturally aligned blueprints to ensure massive variety
 const culturalBlueprints = [
   {
     religion: 'Hindu',
@@ -56,109 +55,58 @@ const randomRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + 
 
 const generateDOB = () => {
   const currentYear = new Date().getFullYear();
-  const birthYear = currentYear - randomRange(22, 35);
-  return new Date(birthYear, randomRange(0, 11), randomRange(1, 28));
+  return new Date(currentYear - randomRange(22, 35), randomRange(0, 11), randomRange(1, 28));
 };
 
 const generateProfiles = () => {
   const profiles = [];
   let idCounter = 1;
 
-  // Generate 150 Unique Men (Balanced across cultures)
   while (profiles.filter(p => p.gender === 'Male').length < 150) {
-    // Pick blueprint based on current loop index step to force a strict equal distribution
     const blueprint = culturalBlueprints[idCounter % culturalBlueprints.length];
     const firstName = randomChoice(blueprint.maleFirstNames);
     const lastName = randomChoice(blueprint.lastNames);
-    const religion = blueprint.religion;
-    const caste = randomChoice(blueprint.castes);
-
-    const height = randomRange(165, 188);
-    const income = randomRange(8, 45);
     const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${idCounter}@thedatecrew.com`;
 
-    if (profiles.some(p => p.email === email)) {
-      idCounter++; // increment to cycle blueprint even on skip
-      continue;
-    }
+    if (profiles.some(p => p.email === email)) { idCounter++; continue; }
 
     profiles.push({
-      firstName,
-      lastName,
-      gender: 'Male',
-      dateOfBirth: generateDOB(),
-      email,
-      phone: `98765${String(idCounter).padStart(5, '0')}`,
-      city: randomChoice(cities),
-      religion,
-      caste,
-      languagesKnown: randomChoice(languages),
-      college: randomChoice(colleges),
-      degree: randomChoice(degrees),
-      company: randomChoice(companies),
-      designation: randomChoice(designations),
-      income,
-      height,
+      firstName, lastName, gender: 'Male', dateOfBirth: generateDOB(), email,
+      phone: `98765${String(idCounter).padStart(5, '0')}`, city: randomChoice(cities),
+      religion: blueprint.religion, caste: randomChoice(blueprint.castes), languagesKnown: randomChoice(languages),
+      college: randomChoice(colleges), degree: randomChoice(degrees), company: randomChoice(companies),
+      designation: randomChoice(designations), income: randomRange(8, 45), height: randomRange(165, 188),
       maritalStatus: randomChoice(['Never Married', 'Never Married', 'Never Married', 'Divorced']),
-      siblings: randomRange(0, 2),
-      diet: religion === 'Jain' ? 'Jain' : randomChoice(['Veg', 'Non-Veg', 'Eggetarian']),
-      wantKids: randomChoice(['Yes', 'No', 'Maybe']),
-      openToRelocate: randomChoice(['Yes', 'No', 'Maybe']),
-      openToPets: randomChoice(['Yes', 'No', 'Maybe']),
-      familyValues: randomChoice(['Traditional', 'Moderate', 'Liberal']),
-      journeyStatus: 'Profile Verified',
-      matchmakerNotes: [{ note: "Profile screened and documents verified by system automatically." }]
+      siblings: randomRange(0, 2), diet: blueprint.religion === 'Jain' ? 'Jain' : randomChoice(['Veg', 'Non-Veg', 'Eggetarian']),
+      wantKids: randomChoice(['Yes', 'No', 'Maybe']), openToRelocate: randomChoice(['Yes', 'No', 'Maybe']),
+      openToPets: randomChoice(['Yes', 'No', 'Maybe']), familyValues: randomChoice(['Traditional', 'Moderate', 'Liberal']),
+      journeyStatus: 'Profile Verified', matchmakerNotes: [{ note: "Profile screened and documents verified automatically." }]
     });
     idCounter++;
   }
 
-  // Generate 150 Unique Women (Balanced across cultures)
   while (profiles.filter(p => p.gender === 'Female').length < 150) {
     const blueprint = culturalBlueprints[idCounter % culturalBlueprints.length];
     const firstName = randomChoice(blueprint.femaleFirstNames);
     const lastName = randomChoice(blueprint.lastNames);
-    const religion = blueprint.religion;
-    const caste = randomChoice(blueprint.castes);
-
-    const height = randomRange(150, 173);
-    const income = randomRange(6, 35);
     const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${idCounter}@thedatecrew.com`;
 
-    if (profiles.some(p => p.email === email)) {
-      idCounter++;
-      continue;
-    }
+    if (profiles.some(p => p.email === email)) { idCounter++; continue; }
 
     profiles.push({
-      firstName,
-      lastName,
-      gender: 'Female',
-      dateOfBirth: generateDOB(),
-      email,
-      phone: `98765${String(idCounter).padStart(5, '0')}`,
-      city: randomChoice(cities),
-      religion,
-      caste,
-      languagesKnown: randomChoice(languages),
-      college: randomChoice(colleges),
-      degree: randomChoice(degrees),
-      company: randomChoice(companies),
-      designation: randomChoice(designations),
-      income,
-      height,
+      firstName, lastName, gender: 'Female', dateOfBirth: generateDOB(), email,
+      phone: `98765${String(idCounter).padStart(5, '0')}`, city: randomChoice(cities),
+      religion: blueprint.religion, caste: randomChoice(blueprint.castes), languagesKnown: randomChoice(languages),
+      college: randomChoice(colleges), degree: randomChoice(degrees), company: randomChoice(companies),
+      designation: randomChoice(designations), income: randomRange(6, 35), height: randomRange(150, 173),
       maritalStatus: randomChoice(['Never Married', 'Never Married', 'Never Married', 'Divorced']),
-      siblings: randomRange(0, 2),
-      diet: religion === 'Jain' ? 'Jain' : randomChoice(['Veg', 'Non-Veg', 'Eggetarian']),
-      wantKids: randomChoice(['Yes', 'No', 'Maybe']),
-      openToRelocate: randomChoice(['Yes', 'No', 'Maybe']),
-      openToPets: randomChoice(['Yes', 'No', 'Maybe']),
-      familyValues: randomChoice(['Traditional', 'Moderate', 'Liberal']),
-      journeyStatus: 'Profile Verified',
-      matchmakerNotes: [{ note: "Profile screened and documents verified by system automatically." }]
+      siblings: randomRange(0, 2), diet: blueprint.religion === 'Jain' ? 'Jain' : randomChoice(['Veg', 'Non-Veg', 'Eggetarian']),
+      wantKids: randomChoice(['Yes', 'No', 'Maybe']), openToRelocate: randomChoice(['Yes', 'No', 'Maybe']),
+      openToPets: randomChoice(['Yes', 'No', 'Maybe']), familyValues: randomChoice(['Traditional', 'Moderate', 'Liberal']),
+      journeyStatus: 'Profile Verified', matchmakerNotes: [{ note: "Profile screened and documents verified automatically." }]
     });
     idCounter++;
   }
-
   return profiles;
 };
 
@@ -166,12 +114,9 @@ mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('🔄 Connected to MongoDB. Clearing outdated records...');
     await Customer.deleteMany({});
-
     console.log('🌱 Building clean balanced matrix of 300 unique profiles...');
-    const mockData = generateProfiles();
-
-    await Customer.insertMany(mockData);
-    console.log('✅ Success! 150 unique men and 150 unique women injected into Atlas with perfect distribution.');
+    await Customer.insertMany(generateProfiles());
+    console.log('✅ Success! Database injected with clean profile distribution.');
     process.exit(0);
   })
   .catch((err) => {

@@ -42,7 +42,6 @@ exports.updateCustomerStatusAndNotes = async (req, res) => {
   }
 };
 
-// ================= BROAD ALGORITHMIC MATCHING SUITE =================
 exports.getAlgorithmicMatches = async (req, res) => {
   try {
     const customerId = req.params.customerId || req.params.id; 
@@ -117,7 +116,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
 
     const formattedMatches = topMatches.map(matchProfile => ({
       profile: matchProfile,
-      // 💡 Fixed: Case-insensitive criteria check ensures badges like "Caste Match" render correctly
       matchingCriteria: [
         (matchProfile.religion || "").toLowerCase() === clientReligion ? "Religion Match" : null,
         (matchProfile.caste || "").toLowerCase() === clientCaste ? "Caste Match" : null,
@@ -132,7 +130,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
   }
 };
 
-// ================= AI COMPLIANCE ENGINE WITH RELIGION RANKING MATRIX =================
 exports.getAIMatchAnalysis = async (req, res) => {
   try {
     const { clientId, matchId } = req.body;
@@ -183,9 +180,10 @@ exports.getAIMatchAnalysis = async (req, res) => {
       1. compatibilityScore Calculation: Compute an integer between 45 and 98. Calculate this dynamically based on data. Reward heavily (+10 to +15 points) for shared Religion and Caste lineage sync.
       2. Detailed Strengths: Provide exactly three highly detailed sentences using their explicit first names. Sentence 1 logs professional status, Sentence 2 logs cultural lineage metrics, and Sentence 3 logs core preference alignment.
       3. Friction Risk Assessment (Challenges):
-      - Provide exactly two analytical sentences flagging structural differences.
-      - Detail active friction parameters like geographic proximity elements (ONLY if they live in DIFFERENT cities or countries), professional timeline balances, or variance in preference layouts.
-      - CRITICAL: If both individuals live in the same city, DO NOT call it a challenge or state that it lacks geographical diversity. Proximity is a strength. Instead, focus on minor professional timeline gaps or lifestyle differences.
+         - Provide exactly two analytical sentences flagging structural differences.
+         - Detail active friction parameters like geographic proximity elements (ONLY if they live in DIFFERENT cities or countries), professional timeline balances, or variance in preference layouts.
+         - CRITICAL: If both individuals live in the same city, DO NOT call it a challenge or state that it lacks geographical diversity. Proximity is a strength. Instead, focus on minor professional timeline gaps or lifestyle differences.
+
       Return ONLY a raw, unquoted JSON object matching the JSON schema format below. Do NOT use placeholder values from the example layout schema directly; compute the compatibilityScore value completely dynamically from your analysis:
       {
         "compatibilityScore": YOUR_DYNAMICALLY_CALCULATED_INTEGER_HERE,
@@ -204,7 +202,7 @@ exports.getAIMatchAnalysis = async (req, res) => {
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.1-8b-instant',
-      temperature: 0.4, // Slight increase allows the model to calculate varied scores naturally
+      temperature: 0.4, 
       response_format: { type: "json_object" }
     });
 
@@ -213,5 +211,26 @@ exports.getAIMatchAnalysis = async (req, res) => {
   } catch (error) {
     console.error("Groq Prompt Pipeline Intercept Error:", error.message);
     res.status(500).json({ message: "Internal analysis loop error", error: error.message });
+  }
+};
+
+// ================= DELETE OPERATIONAL LOG NOTE =================
+exports.deleteCustomerNote = async (req, res) => {
+  try {
+    const { id, noteId } = req.params;
+
+    const updatedCustomer = await Customer.findByIdAndUpdate(
+      id,
+      { $pull: { matchmakerNotes: { _id: noteId } } },
+      { new: true }
+    );
+
+    if (!updatedCustomer) {
+      return res.status(404).json({ message: "Customer profile not found" });
+    }
+
+    res.status(200).json({ message: "Log entry successfully deleted", customer: updatedCustomer });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting customer log record", error: error.message });
   }
 };

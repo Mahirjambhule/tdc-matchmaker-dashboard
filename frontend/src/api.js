@@ -27,6 +27,14 @@ export const api = {
     return response.json();
   },
 
+  deleteCustomerLog: async (id, noteId) => {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/logs/${noteId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to remove targeted note item');
+    return response.json();
+  },
+
   getAlgorithmicMatches: async (id) => {
     const response = await axios.get(`${API_BASE_URL}/customers/${id}/matches`); 
     return response.data;
