@@ -182,6 +182,7 @@ exports.getAIMatchAnalysis = async (req, res) => {
       PRIMARY CLIENT DOSSIER
       ===================================================================
       • Full Identity: ${client.firstName} ${client.lastName} (${client.gender})
+      • Marital Status: ${client.maritalStatus || 'N/A'}
       • Current City: ${client.city || 'N/A'}
       • Career Track: ${client.designation || 'N/A'} at ${client.company || 'N/A'}
       • Academic Foundation: ${client.degree || 'N/A'} from ${client.college || 'N/A'}
@@ -195,6 +196,7 @@ exports.getAIMatchAnalysis = async (req, res) => {
       POTENTIAL MATCH CANDIDATE DOSSIER
       ===================================================================
       • Full Identity: ${match.firstName} ${match.lastName} (${match.gender})
+      • Marital Status: ${match.maritalStatus || 'N/A'}
       • Current City: ${match.city || 'N/A'}
       • Career Track: ${match.designation || 'N/A'} at ${match.company || 'N/A'}
       • Academic Foundation: ${match.degree || 'N/A'} from ${match.college || 'N/A'}
@@ -207,14 +209,15 @@ exports.getAIMatchAnalysis = async (req, res) => {
       ===================================================================
       STRICT MANDATE PROTOCOLS FOR THE ANALYSIS
       ===================================================================
-      1. compatibilityScore Matrix: Output an integer from 45 to 98. Weigh matching values, shared dietary paths, and geographic proximity highly.
+      1. compatibilityScore Matrix: Output an integer from 45 to 98. Weigh matching values, shared dietary paths, geographic proximity, and marital status alignment highly.
       2. Comprehensive Strengths: Provide exactly 3 highly descriptive sentences utilizing their first names (${client.firstName} and ${match.firstName}).
          - Sentence 1: Analyze how their City proximity or Relocation flexibility combined with professional landscapes align.
          - Sentence 2: Contrast and highlight their Education Background and career trajectory synergy.
-         - Sentence 3: Target the alignment of their Dietary Preferences, Pet stances, and Wants Children outlook.
+         - Sentence 3: Target the alignment of their Dietary Preferences, Pet stances, and Wants Children outlook. Praise them if both share the same Marital Status (e.g., both Never Married or both Divorced).
       3. Friction Point Assessments (Challenges): Provide exactly 2 distinct sentences identifying challenges.
          - Analyze conflicts between Core Values (e.g., Traditional vs Liberal), contrasting relocation preferences, or potential adjustments in lifestyle metrics.
-         - CRITICAL: If they live in the same city, praise it in strengths; DO NOT mark it as a geographic challenge.
+         - CRITICAL MARITAL STATUS CHECK: Evaluate if there is a mismatch in Marital Status (e.g., one is 'Never Married' while the other is 'Divorced'). If a mismatch exists, explicitly detail the potential social, familial, or emotional adjustment barriers this introduces.
+         - CRITICAL GEOGRAPHY CHECK: If they live in the same city, praise it in strengths; DO NOT mark it as a geographic challenge.
 
       Return ONLY a raw, unquoted JSON object matching the template below. No markdown text, no surrounding text block wrappers:
       {
@@ -222,10 +225,10 @@ exports.getAIMatchAnalysis = async (req, res) => {
         "strengths": [
           "Sentence 1 details city proximity, mobility, and workspace metrics.",
           "Sentence 2 details education backgrounds and professional trajectories sync.",
-          "Sentence 3 details dietary preferences, values, pets, and children alignment."
+          "Sentence 3 details dietary preferences, values, pets, and children/marital status alignment."
         ],
         "challenges": [
-          "Sentence 1 highlights core values friction or relocation limitations.",
+          "Sentence 1 highlights core values friction, relocation limitations, or marital status adjustments.",
           "Sentence 2 highlights lifestyle compromises or adjustment vectors."
         ]
       }
