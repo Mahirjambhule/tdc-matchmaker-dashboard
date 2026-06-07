@@ -1,7 +1,8 @@
 🚀 TDC - Matchmaker Portal
 An internal matchmaking dashboard for The Date Crew (TDC). It connects local database filters with Advanced AI to optimize candidate matching.
 
-🔗 Live Link: tdc-matchmaker-dashboard-bay.vercel.app
+🔗 Live Link
+👉 tdc-matchmaker-dashboard-bay.vercel.app
 
 🌟 Core Features
 Secure Auth Login: Protected admin portal space using credentials matchmaker / tdc2026.
