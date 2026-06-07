@@ -222,7 +222,7 @@ exports.deleteCustomerNote = async (req, res) => {
     const updatedCustomer = await Customer.findByIdAndUpdate(
       id,
       { $pull: { matchmakerNotes: { _id: noteId } } },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updatedCustomer) {

@@ -27,20 +27,26 @@ export default function DetailedMatchView({ customerId, onBack }) {
       const clientHeight = parseFloat(clientData.height) || 160;
       const clientIncome = parseFloat(clientData.income) || 0;
 
+      // =================================================================
+      // STAGE 1: TAILORED GENDER & RELIGION COMPATIBILITY MATRIX
+      // =================================================================
       const scoredPool = matchesData.map(candidate => {
-        const matchProfile = candidate.profile;
+        const matchProfile = candidate.profile; 
         if (!matchProfile) return null;
 
+        // Strict Structural Alignment Rule: Must belong to the exact same religion
         if (clientData.religion?.toLowerCase() !== matchProfile.religion?.toLowerCase()) {
-          return null;
+          return null; 
         }
-
-        let score = 50;
+        
+        let score = 50; // Baseline starting matrix index
         const candidateAge = new Date().getFullYear() - new Date(matchProfile.dateOfBirth).getFullYear();
         const candidateHeight = parseFloat(matchProfile.height) || 160;
         const candidateIncome = parseFloat(matchProfile.income) || 0;
 
+        // Strict Gender Criteria Routing
         if (clientData.gender === 'Male') {
+          // Male constraints: Younger, earns less, shorter, matching views on kids
           const isYounger = candidateAge < clientAge;
           const earnsLess = candidateIncome < clientIncome;
           const isShorter = candidateHeight < clientHeight;
@@ -52,21 +58,31 @@ export default function DetailedMatchView({ customerId, onBack }) {
           if (matchesKidsView) score += 15;
 
           if (!isYounger || !earnsLess || !isShorter) {
-            score -= 25;
+            score -= 25; 
           }
         } else {
+          // 💡 FIXED: Female constraints. Heavily reward men who are PEERS OR OLDER.
+          // Penalize and drop younger men out of top placements for a 30-year-old female client.
+          const isOlderOrPeer = candidateAge >= clientAge;
+          if (isOlderOrPeer) {
+            score += 30; // Strong positive weight for age compatibility
+          } else {
+            score -= 40; // Heavy penalty to push younger men out of the top list
+          }
+
+          // Thoughtful alignment fields: profession, values, relocation preferences, kids
           if (clientData.designation?.toLowerCase() === matchProfile.designation?.toLowerCase() ||
-            clientData.company?.toLowerCase() === matchProfile.company?.toLowerCase()) {
-            score += 15;
+              clientData.company?.toLowerCase() === matchProfile.company?.toLowerCase()) {
+            score += 15; 
           }
           if (clientData.familyValues === matchProfile.familyValues) {
-            score += 15;
+            score += 15; 
           }
           if (clientData.openToRelocate === matchProfile.openToRelocate) {
-            score += 15;
+            score += 15; 
           }
           if (clientData.wantKids === matchProfile.wantKids) {
-            score += 15;
+            score += 15; 
           }
         }
 
@@ -74,21 +90,22 @@ export default function DetailedMatchView({ customerId, onBack }) {
           score += 10;
         }
 
-        return {
-          ...candidate,
+        return { 
+          ...candidate, 
           suitabilityScore: score,
-          matchingCriteria: []
+          matchingCriteria: [] 
         };
       }).filter(Boolean);
 
-      const top10Candidates = scoredPool
+      // 💡 FIXED: Slicing the array to cap at exactly AT MOST 5 profiles instead of 10
+      const top5Candidates = scoredPool
         .sort((a, b) => b.suitabilityScore - a.suitabilityScore)
-        .slice(0, 10)
+        .slice(0, 5)
         .map(c => ({ ...c, aiScore: null, rankLabel: null, aiExplanation: null }));
 
       setClient(clientData);
       setJourneyStatus(clientData.journeyStatus);
-      setCandidates(top10Candidates);
+      setCandidates(top5Candidates); 
       setIsRankedByAI(false);
     } catch (err) {
       console.error("Error setting up matchmaker channels:", err);
@@ -117,7 +134,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
   const handleDeleteNote = async (noteId) => {
     try {
       await api.deleteCustomerLog(client._id, noteId);
-      await loadWorkspaceData();
+      await loadWorkspaceData(); 
     } catch (err) {
       console.error("Note deletion fault:", err);
     }
@@ -126,17 +143,18 @@ export default function DetailedMatchView({ customerId, onBack }) {
   const executeBulkAIRanking = async () => {
     try {
       setLoadingAI(true);
-      const finalRankedTop10 = [];
+      const finalRankedTop5 = [];
 
+      // Sequentially processes exactly 5 items now—lightning fast computation!
       for (const candidate of candidates) {
         try {
-          await new Promise(resolve => setTimeout(resolve, 350));
+          await new Promise(resolve => setTimeout(resolve, 350)); 
           const response = await api.getAIMatchAnalysis({ clientId: client._id, matchId: candidate.profile._id });
           let rankExplanation = response.compatibilityScore >= 90 ? "Elite High-Potential Match" : response.compatibilityScore >= 80 ? "High Potential Match" : "Standard Potential Match";
 
-          finalRankedTop10.push({ ...candidate, aiScore: response.compatibilityScore, rankLabel: rankExplanation, aiExplanation: response });
+          finalRankedTop5.push({ ...candidate, aiScore: response.compatibilityScore, rankLabel: rankExplanation, aiExplanation: response });
         } catch (innerErr) {
-          finalRankedTop10.push({
+          finalRankedTop5.push({
             ...candidate,
             aiScore: Math.min(Math.max(candidate.suitabilityScore, 45), 95),
             rankLabel: "Matrix Calculated Fit",
@@ -144,8 +162,8 @@ export default function DetailedMatchView({ customerId, onBack }) {
           });
         }
       }
-      finalRankedTop10.sort((a, b) => b.aiScore - a.aiScore);
-      setCandidates(finalRankedTop10);
+      finalRankedTop5.sort((a, b) => b.aiScore - a.aiScore);
+      setCandidates(finalRankedTop5);
       setIsRankedByAI(true);
     } catch (err) {
       console.error(err);
@@ -165,7 +183,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-
+        
         {/* Left Column Sidebar Dossier Overview Panel */}
         <div className="lg:col-span-5 flex flex-col h-full space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs flex flex-col justify-between space-y-4">
@@ -177,7 +195,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                   <p className="text-xs text-gray-400 font-medium">{client.gender} • {client.maritalStatus}</p>
                 </div>
               </div>
-
+              
               <div className="py-4 space-y-4 text-sm">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-600">Full Biodata Dossier</h4>
                 <div className="grid grid-cols-2 gap-y-3 gap-x-4">
@@ -185,7 +203,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">Height</p><p className="font-medium text-gray-800">{client.height} cm</p></div>
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">City</p><p className="font-medium text-gray-800">{client.city}</p></div>
                   <div><p className="text-[11px] text-gray-400 uppercase font-medium">Income Bracket</p><p className="font-medium text-emerald-700 font-semibold">{client.income} LPA</p></div>
-
+                  
                   <div className="col-span-2 border-t border-gray-50 pt-2">
                     <p className="text-[11px] text-gray-400 uppercase font-medium">Religion / Caste</p>
                     <p className="font-bold text-gray-800 text-xs mt-0.5">{client.religion} / {client.caste || 'None'}</p>
@@ -239,7 +257,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-gray-400 italic py-2 text-center">No structural entries submitted for this file layout.</p>
+                <p className="text-xs text-gray-400 italic py-2 text-center">No entries recorded.</p>
               )}
             </div>
           </div>
@@ -247,36 +265,36 @@ export default function DetailedMatchView({ customerId, onBack }) {
 
         {/* Right Column Matching Results Queue Dashboard Container */}
         <div className="lg:col-span-7 flex flex-col h-full">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs flex flex-col h-full max-h-[720px]">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs flex flex-col h-full">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="font-serif text-lg font-bold text-gray-900 mb-1 flex items-center space-x-2"><Award className="w-5 h-5 text-amber-500" /><span>Algorithmic Matching Results Queue</span></h3>
                 <p className="text-xs text-gray-400 font-medium">Displaying targeted data-matched opposite gender choices based on matrimonial sorting rules parameters.</p>
               </div>
-
-              {/* 💡 REDESIGNED: Premium Neon Glow-Border AI Execution Trigger Element Control Block */}
+              
               <button
                 onClick={executeBulkAIRanking}
                 disabled={loadingAI}
-                className="w-full sm:w-auto relative group overflow-hidden rounded-xl p-[1.5px] focus:outline-none transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.45)] hover:shadow-[0_0_25px_rgba(245,158,11,0.7)]"
+                className="w-full sm:w-auto relative group overflow-hidden rounded-lg p-[1px] focus:outline-none transition-all duration-300 transform hover:scale-[1.01] active:scale-95 shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.35)] hover:shadow-[0_0_15px_rgba(245,158,11,0.5)]"
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-xl animate-pulse opacity-90 blur-xs" />
-                <span className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 rounded-xl" />
-                <span className="relative flex items-center justify-center space-x-2 px-5 py-3 rounded-[10px] bg-slate-950 text-white transition-colors duration-200">
-                  <Sparkles className={`w-4 h-4 text-amber-400 ${loadingAI ? 'animate-spin' : 'animate-bounce'}`} />
+                <span className="absolute inset-0 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-lg animate-pulse opacity-90 blur-xs" />
+                <span className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 rounded-lg" />
+                <span className="relative flex items-center justify-center space-x-1.5 px-3.5 py-1.5 rounded-[7px] bg-slate-950 text-white transition-colors duration-200">
+                  <Sparkles className={`w-3.5 h-3.5 text-amber-400 ${loadingAI ? 'animate-spin' : ''}`} />
                   <span className="bg-gradient-to-r from-amber-200 via-yellow-400 to-orange-200 bg-clip-text text-transparent font-mono font-bold text-[10px] tracking-wider uppercase">
-      {loadingAI ? 'AI MATCHING...' : isRankedByAI ? 'REFRESH AI MATCH' : 'MATCH BETTER WITH AI'}
-    </span>
+                    {loadingAI ? 'AI MATCHING...' : isRankedByAI ? 'REFRESH AI MATCH' : 'MATCH BETTER WITH AI'}
+                  </span>
                 </span>
               </button>
             </div>
 
-            <div className="space-y-4 overflow-y-auto mt-4 pr-2 flex-1 min-h-0">
+            {/* 💡 FIXED: Removed overflow-y-auto, max-h boundaries, and pr scroll constraints. Sits clean and flat! */}
+            <div className="space-y-4 mt-4 flex-1">
               {candidates.map((candidate) => {
                 const match = candidate.profile;
                 return (
-                  <div
-                    key={match._id}
+                  <div 
+                    key={match._id} 
                     onClick={() => setPreviewProfile(match)}
                     className="p-5 border border-gray-100 bg-gray-50/50 rounded-xl flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center group hover:border-gray-200 cursor-pointer transition-all"
                   >
@@ -380,7 +398,7 @@ export default function DetailedMatchView({ customerId, onBack }) {
                 <div className="col-span-2 border-t border-gray-200/50 pt-2"><p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Professional Track</p><p className="font-semibold text-gray-800 mt-0.5">{previewProfile.designation}</p><p className="text-gray-500 font-medium">{previewProfile.company}</p></div>
                 <div className="col-span-2 border-t border-gray-200/50 pt-2"><p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Academic Credentials</p><p className="font-semibold text-gray-800 mt-0.5">{previewProfile.degree}</p><p className="text-gray-500 text-[11px] font-medium">{previewProfile.college}</p></div>
                 <div className="border-t border-gray-200/50 pt-2"><p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Age / Height Dimensions</p><p className="font-medium text-gray-700 mt-0.5">{new Date().getFullYear() - new Date(previewProfile.dateOfBirth).getFullYear()} Yrs • {previewProfile.height} cm</p></div>
-
+                
                 <div className="border-t border-gray-200/50 pt-2">
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Religion / Caste</p>
                   <p className="font-bold text-amber-800 mt-0.5">{previewProfile.religion} / {previewProfile.caste || 'None'}</p>
