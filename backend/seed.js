@@ -53,7 +53,6 @@ const designations = ['Software Engineer', 'Product Manager', 'Data Analyst', 'F
 const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randomRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-// Generates dynamic DOB matching an age range of exactly 24 to 32
 const generateDOB = () => {
   const currentYear = new Date().getFullYear();
   return new Date(currentYear - randomRange(24, 32), randomRange(0, 11), randomRange(1, 28));

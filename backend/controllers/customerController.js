@@ -2,7 +2,6 @@ const Groq = require('groq-sdk');
 const mongoose = require('mongoose');
 const Customer = require('../models/Customer');
 
-// Helper function to dynamically calculate age from dateOfBirth strings safely
 const calculateAge = (dobString) => {
   if (!dobString) return 'N/A';
   const birthYear = new Date(dobString).getFullYear();
@@ -10,7 +9,6 @@ const calculateAge = (dobString) => {
   return currentYear - birthYear;
 };
 
-// ================= FETCH ALL CUSTOMERS =================
 exports.getAllCustomers = async (req, res) => {
   try {
     const customers = await Customer.find({}, 'firstName lastName gender dateOfBirth city maritalStatus journeyStatus');
@@ -20,7 +18,6 @@ exports.getAllCustomers = async (req, res) => {
   }
 };
 
-// ================= FETCH PROFILE BY ID =================
 exports.getCustomerById = async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
@@ -33,7 +30,6 @@ exports.getCustomerById = async (req, res) => {
   }
 };
 
-// ================= UPDATE STATUS AND NOTES =================
 exports.updateCustomerStatusAndNotes = async (req, res) => {
   try {
     const { journeyStatus, newNote } = req.body;
@@ -53,7 +49,6 @@ exports.updateCustomerStatusAndNotes = async (req, res) => {
   }
 };
 
-// ================= ALGORITHMIC MATCHING ENGINE =================
 exports.getAlgorithmicMatches = async (req, res) => {
   try {
     const customerId = req.params.customerId || req.params.id;
@@ -68,18 +63,15 @@ exports.getAlgorithmicMatches = async (req, res) => {
     const isClientMale = client.gender === 'Male';
 
     const topMatches = await Customer.aggregate([
-      // STAGE 1: Hard Filters (Strict matching rules)
       {
         $match: {
           _id: { $ne: new mongoose.Types.ObjectId(customerId) },
           gender: isClientMale ? 'Female' : 'Male',
           religion: client.religion,
           
-          // HARD MATCH PROTOCOLS:
           $expr: {
             $cond: [
               isClientMale,
-              // If Primary Client is MALE: Candidate (Female) MUST be younger, shorter, and earn less/equal
               {
                 $and: [
                   { $gt: [{ $year: "$dateOfBirth" }, clientBirthYear] }, 
@@ -87,7 +79,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
                   { $lte: [{ $ifNull: ["$income", 0] }, client.income || 999] }
                 ]
               },
-              // If Primary Client is FEMALE: Candidate (Male) MUST be older, taller, and earn more/equal
               {
                 $and: [
                   { $lt: [{ $year: "$dateOfBirth" }, clientBirthYear] }, 
@@ -100,7 +91,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
         }
       },
       
-      // STAGE 2: Add dynamic age fields for sorting optimization
       {
         $addFields: {
           candidateBirthYear: { $year: "$dateOfBirth" },
@@ -108,14 +98,12 @@ exports.getAlgorithmicMatches = async (req, res) => {
         }
       },
       
-      // STAGE 3: Structural Scoring Layer (Finetuning the ranks)
       {
         $addFields: {
           structuralScore: {
             $add: [
               50, 
               
-              // Age Gap Scoring Strategy
               {
                 $let: {
                   vars: { ageGap: { $abs: { $subtract: [clientAge, { $subtract: [currentYear, { $year: "$dateOfBirth" }] }] } } },
@@ -129,7 +117,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
                 }
               },
               
-              // Height Offset Points
               {
                 $cond: [
                   isClientMale,
@@ -138,7 +125,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
                 ]
               },
               
-              // Income Alignment Points
               {
                 $cond: [
                   isClientMale,
@@ -151,7 +137,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
         }
       },
       
-      // STAGE 4: Final output sorting
       { $sort: { structuralScore: -1 } },
       { $limit: 10 }
     ]);
@@ -162,7 +147,6 @@ exports.getAlgorithmicMatches = async (req, res) => {
   }
 };
 
-// ================= AI MATCH ANALYSIS PIPELINE =================
 exports.getAIMatchAnalysis = async (req, res) => {
   try {
     const { clientId, matchId } = req.body;
@@ -173,7 +157,6 @@ exports.getAIMatchAnalysis = async (req, res) => {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     
-    // Construct prompt with clean attribute normalization and fallbacks to prevent undefined values
     const prompt = `
       You are the Lead Relationship Intelligence Architect for "The Date Crew" management dashboard.
       Perform an exhaustive, data-driven compatibility evaluation between the following two individuals. You must conduct an intersectional analysis focusing deeply on lifestyle, structural, and cultural variables.
@@ -249,7 +232,6 @@ exports.getAIMatchAnalysis = async (req, res) => {
   }
 };
 
-// ================= DELETE LOG ENTRY =================
 exports.deleteCustomerNote = async (req, res) => {
   try {
     const { id, noteId } = req.params;
