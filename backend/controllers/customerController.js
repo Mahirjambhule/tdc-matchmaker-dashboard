@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const Customer = require('../models/Customer');
 
 exports.getAllCustomers = async (req, res) => {
@@ -108,115 +108,98 @@ exports.getAlgorithmicMatches = async (req, res) => {
 exports.getAIMatchAnalysis = async (req, res) => {
   try {
     const { clientId, matchId } = req.body;
-
-    // Concurrent safety timeout delay to stagger batch loads cleanly
-    await new Promise(resolve => setTimeout(resolve, 450));
-
+    
     const client = await Customer.findById(clientId);
     const match = await Customer.findById(matchId);
 
     if (!client || !match) {
-      return res.status(404).json({ message: "Profiles not found." });
+      return res.status(404).json({ message: "Profiles not found in active database directories." });
     }
 
-    let analysisData;
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // Helper to calculate exact age strings from Date of Birth variables
+    const calculateAge = (dob) => {
+      if (!dob) return "N/A";
+      return new Date().getFullYear() - new Date(dob).getFullYear() + " Yrs";
+    };
 
-      const prompt = `
-        You are the Chief Relationship Matrix Architect for "The Date Crew".
-        Perform an intensive compatibility calculation and demographic matching assessment between two profiles.
-        
-        CRITICAL ATTRIBUTE REGISTER - CLIENT A (PRIMARY):
-        - Name: ${client.firstName} ${client.lastName} (${client.gender})
-        - Age/Height: ${new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear()} Yrs, ${client.height} cm
-        - Cultural Domain: Religion: ${client.religion}, Caste: ${client.caste}
-        - Professional Standing: ${client.designation} at ${client.company} | Income: ${client.income} LPA
-        - Socio-Lifestyle Matrix: Marital Status: ${client.maritalStatus}, Diet: ${client.diet}, Values: ${client.familyValues}
-        - Preference Layout: Wants Kids: ${client.wantKids}, Open to Pets: ${client.openToPets}, Open to Relocate: ${client.openToRelocate}
+    const prompt = `
+      You are the Chief Relationship Matrix Architect for "The Date Crew". 
+      Perform a deep-dive, professional matching evaluation between two individuals, running a strict granular analysis across every single profile attribute provided.
 
-        CRITICAL ATTRIBUTE REGISTER - CLIENT B (CANDIDATE):
-        - Name: ${match.firstName} ${match.lastName} (${match.gender})
-        - Age/Height: ${new Date().getFullYear() - new Date(match.dateOfBirth).getFullYear()} Yrs, ${match.height} cm
-        - Cultural Domain: Religion: ${match.religion}, Caste: ${match.caste}
-        - Professional Standing: ${match.designation} at ${match.company} | Income: ${match.income} LPA
-        - Socio-Lifestyle Matrix: Marital Status: ${match.maritalStatus}, Diet: ${match.diet}, Values: ${match.familyValues}
-        - Preference Layout: Wants Kids: ${match.wantKids}, Open to Pets: ${match.openToPets}, Open to Relocate: ${match.openToRelocate}
+      ===================================================================
+      CLIENT A (PRIMARY CLIENT DOSSIER)
+      ===================================================================
+      • Personal Identity: ${client.firstName} ${client.lastName} (${client.gender})
+      • Timeline / Dimensions: Age: ${calculateAge(client.dateOfBirth)} | Height: ${client.height || 'N/A'} cm
+      • Cultural / Lineage Blueprint: Religion: ${client.religion} | Caste: ${client.caste} | Languages Known: ${client.languagesKnown || 'N/A'}
+      • Professional Tracker: Designation: ${client.designation} at ${client.company} | Income: ${client.income || '0'} LPA
+      • Academic Foundation: Degree: ${client.degree} | College: ${client.college}
+      • Socio-Demographics: Location: ${client.city}, ${client.country || 'India'} | Marital Status: ${client.maritalStatus} | Siblings: ${client.siblings || 'None'}
+      • Future Core Preferences: Wants Kids: ${client.wantKids} | Open to Relocate: ${client.openToRelocate} | Open to Pets: ${client.openToPets}
+      • Contact Registry (For System Ref): Email: ${client.email} | Phone: ${client.phone}
 
-        EVALUATION PROTOCOL MATRIX:
-        1. compatibilityScore: Return an Integer (45 to 98). Pay exceptional attention to cultural lineage tracking. If religion matches, give a bonus. If religion does not match, apply a clear deduction to rank them lower.
-        2. strengths: Provide exactly two sentences tracking clear multi-point data combinations. Explicitly mention names, professional roles, matching dietary preferences, and ancestral values (${client.religion} / ${client.caste}).
-        3. challenges: Provide exactly one or two analytical sentences flagging cross-city logistics, value transitions, or subtle attribute conflicts.
+      ===================================================================
+      CLIENT B (POTENTIAL MATCH CANDIDATE)
+      ===================================================================
+      • Personal Identity: ${match.firstName} ${match.lastName} (${match.gender})
+      • Timeline / Dimensions: Age: ${calculateAge(match.dateOfBirth)} | Height: ${match.height || 'N/A'} cm
+      • Cultural / Lineage Blueprint: Religion: ${match.religion} | Caste: ${match.caste} | Languages Known: ${match.languagesKnown || 'N/A'}
+      • Professional Tracker: Designation: ${match.designation} at ${match.company} | Income: ${match.income || '0'} LPA
+      • Academic Foundation: Degree: ${match.degree} | College: ${match.college}
+      • Socio-Demographics: Location: ${match.city}, ${match.country || 'India'} | Marital Status: ${match.maritalStatus} | Siblings: ${match.siblings || 'None'}
+      • Future Core Preferences: Wants Kids: ${match.wantKids} | Open to Relocate: ${match.openToRelocate} | Open to Pets: ${match.openToPets}
+      • Contact Registry (For System Ref): Email: ${match.email} | Phone: ${match.phone}
 
-        Return ONLY a clean JSON string with this format:
-        {
-          "compatibilityScore": 92,
-          "strengths": [
-            "Sentences mapping structural professional and lifestyle alignment.",
-            "Sentences mapping cultural lineage symmetry."
-          ],
-          "challenges": [
-            "Sentences tracking active friction variables cleanly."
-          ]
-        }
-      `;
+      ===================================================================
+      STRICT EVALUATION MANDATE PROTOCOLS
+      ===================================================================
+      1. compatibilityScore Calculation: 
+         - Compute an integer between 45 and 98.
+         - Reward heavily (+10 to +15 points) for shared Religion and Caste lineage sync.
+         - Evaluate background synergy, location layout metrics, future life goals (Kids/Relocation), and professional tracks.
+         - Apply calculated penalties if there are clear contradictions (e.g., if one explicitly wants kids and the other doesn't, or severe income/location mismatches).
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text().trim();
-      const matchJson = responseText.match(/\{[\s\S]*\}/);
-      
-      if (!matchJson) throw new Error("JSON payload malformed.");
-      analysisData = JSON.parse(matchJson[0]);
+      2. Detailed Strengths:
+         - Provide exactly three highly detailed, professional sentences.
+         - Sentence 1 must evaluate their professional status, educational benchmarks, and career synergy.
+         - Sentence 2 must evaluate cultural alignment, ancestral lineage parameters (Religion/Caste), and language compatibility.
+         - Sentence 3 must evaluate lifestyle choices, family integration (Siblings/Marital status), and core future paths (Kids/Pets/Relocation).
+         - Always use explicit names to keep the output highly tailored.
 
-    } catch (aiError) {
-      console.warn("⚠️ Rate Limit Active - Launching Adaptive Matrix Reasoner:", aiError.message);
+      3. Friction Risk Assessment (Challenges):
+         - Provide exactly two analytical sentences flagging structural differences.
+         - Detail geographic proximity elements (City/Country gaps), professional timeline balances, or variance in preference layouts.
 
-      // Adaptive backup computation checking ALL data variables dynamically
-      let structuralScore = 82;
-      const strengthsPool = [
-        `Outstanding career velocity tracking observed between ${client.firstName} (${client.designation}) and ${match.firstName} (${match.designation}).`
-      ];
-      const challengesPool = [];
-
-      // DYNAMIC CALCULATION Matrix based on Religion and Caste
-      if (client.religion.toLowerCase() === match.religion.toLowerCase()) {
-        structuralScore += 10;
-        strengthsPool.push(`Excellent cultural alignment verified inside the shared communal framework of the ${client.religion} community.`);
-        
-        if (client.caste.toLowerCase() === match.caste.toLowerCase()) {
-          structuralScore += 5;
-          strengthsPool.push(`Explicit ancestral lineage validation achieved across matching ${client.caste} parameters.`);
-        }
-      } else {
-        structuralScore -= 15;
-        challengesPool.push(`Cross-cultural variance noticed: Navigating different custom frameworks (${client.religion} vs ${match.religion}).`);
+      Return ONLY a clean JSON object following this exact syntax scheme. Do not provide prose preamble or markdown labels outside the JSON block:
+      {
+        "compatibilityScore": 92,
+        "strengths": [
+          "First highly detailed professional sentence analyzing workspace, degrees, and earnings.",
+          "Second highly detailed cultural sentence analyzing lineage, religion, caste, and communication compatibility.",
+          "Third highly detailed preference sentence analyzing future tracks regarding relocation, domestic layouts, and family expansion parameters."
+        ],
+        "challenges": [
+          "First analytical friction challenge sentence tracking structural differences.",
+          "Second analytical friction challenge sentence evaluating long-term lifestyle adjustment notes."
+        ]
       }
+    `;
 
-      // Proximity metrics tracking
-      if (client.city !== match.city) {
-        structuralScore -= 8;
-        challengesPool.push(`Geographic coordination necessary to bridge social spaces between ${client.city} and ${match.city}.`);
-      } else {
-        structuralScore += 3;
-        challengesPool.push(`Coordinating busy professional timelines natively inside the localized ${client.city} workspace.`);
-      }
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.3, // Lower temperature forces deterministic, analytical reasoning outputs
+      response_format: { type: "json_object" }
+    });
 
-      if (client.diet !== match.diet) {
-        structuralScore -= 5;
-        challengesPool.push(`Dietary preference alignment required between a ${client.diet} menu routine and candidate ${match.diet} requirements.`);
-      }
-
-      analysisData = {
-        compatibilityScore: Math.min(Math.max(structuralScore, 45), 97),
-        strengths: strengthsPool.slice(0, 3),
-        challenges: challengesPool.length > 0 ? challengesPool : ["Coordinating career trajectory requirements alongside active corporate lifestyles."]
-      };
-    }
+    const responseText = chatCompletion.choices[0].message.content.trim();
+    const analysisData = JSON.parse(responseText);
 
     res.status(200).json(analysisData);
   } catch (error) {
-    res.status(500).json({ message: "Fatal engine intercept", error: error.message });
+    console.error("Groq Prompt Pipeline Intercept Error:", error.message);
+    res.status(500).json({ message: "Internal analysis loop error", error: error.message });
   }
 };
